@@ -1,0 +1,22 @@
+record_id,document_type,supplier_ref,invoice_number,invoice_date,taxable_value,cgst,sgst,igst,cess,invoice_total,description
+P-001,invoice,DEMO-SUP-001,INV-08001,2026-08-18,580.00,0.00,0.00,29.00,0.00,609.00,Office stationery refill
+P-002,invoice,DEMO-SUP-002,INV-08002,2026-08-07,4940.00,0.00,0.00,247.00,0.00,5187.00,Laptop repair and servicing
+P-003,invoice,DEMO-SUP-003,INV-08003,2026-08-17,2520.00,0.00,0.00,126.00,0.00,2646.00,Inbound freight delivery
+P-004,invoice,DEMO-SUP-004,INV-08004,2026-08-18,6890.00,620.10,620.10,0.00,0.00,8130.20,Packaging boxes for dispatch
+P-005,invoice,DEMO-SUP-005,INV-08005,2026-08-04,7580.00,454.80,454.80,0.00,0.00,8489.60,Advisory retainer
+P-006,invoice,DEMO-SUP-001,INV-08006,2026-08-20,6430.00,385.80,385.80,0.00,0.00,7201.60,Printer paper A4 reams
+P-007,invoice,DEMO-SUP-002,INV-08007,2026-08-19,3960.00,237.60,237.60,0.00,0.00,4435.20,Network cabling work
+P-008,invoice,DEMO-SUP-003,INV-08008,2026-08-01,7100.00,639.00,639.00,0.00,0.00,8378.00,Courier charges for documents
+P-009,invoice,DEMO-SUP-004,INV-08009,2026-08-28,2360.00,212.40,212.40,0.00,0.00,2784.80,Packaging boxes for dispatch
+P-010,invoice,DEMO-SUP-005,INV-08010,2026-13-01,5180.00,0.00,0.00,932.40,0.00,6112.40,Audit support services
+P-011,invoice,DEMO-SUP-001,INV-08011,2026-08-15,4120.00,0.00,0.00,741.60,0.00,4861.60,Printer paper A4 reams
+P-012,invoice,DEMO-SUP-002,INV-08012,2026-08-04,3730.00,93.25,93.25,0.00,0.00,3916.50,Network cabling work
+P-013,invoice,DEMO-SUP-003,INV-08013,2026-08-17,4140.00,0.00,0.00,496.80,0.00,4636.80,Inbound freight delivery
+P-014,invoice,DEMO-SUP-004,INV-08014,2026-08-04,4320.00,388.80,388.80,0.00,0.00,5097.60,Pest control visit
+P-015,invoice,DEMO-SUP-005,INV-08015,2026-08-17,1600.00,144.00,144.00,0.00,0.00,1888.00,Audit support services
+P-016,invoice,DEMO-SUP-001,INV-08016,2026-08-24,7230.00,180.75,180.75,0.00,0.00,7591.50,Office stationery refill
+P-017,invoice,DEMO-SUP-002,INV-08017,2026-08-06,2410.00,216.90,216.90,0.00,0.00,2843.80,Annual software support
+P-018,invoice,DEMO-SUP-003,INV-08018,2026-08-02,6710.00,603.90,603.90,0.00,0.00,7917.80,Courier charges for documents
+P-019,invoice,DEMO-SUP-004,INV-08019,2026-08-08,7180.00,0.00,0.00,359.00,0.00,7539.00,Packaging boxes for dispatch
+P-020,invoice,DEMO-SUP-005,INV-08020,2026-08-08,6140.00,552.60,552.60,0.00,0.00,7245.20,Professional consulting fees
+P-021,invoice,DEMO-SUP-003,INV-08008,2026-08-01,7100.00,639.00,639.00,0.00,0.00,8378.00,Courier charges for documents
