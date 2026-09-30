@@ -1,0 +1,86 @@
+import { test, expect, Page } from '@playwright/test';
+import { loginApi, loginPage, expectNoPageOverflow } from './auth';
+import path from 'node:path';
+import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
+
+const root = path.resolve(__dirname, '../..');
+async function post(page: Page, part: string, action: () => Promise<unknown>) {
+  const [response] = await Promise.all([page.waitForResponse(r => r.url().includes(part) && r.request().method() === 'POST' && r.status() !== 307), action()]);
+  expect(response.ok(), await response.text()).toBeTruthy();
+  return response.json();
+}
+
+test('Sales preparation preserves versions, reviews, source rows and export totals', async ({ page, request }, testInfo) => {
+  const base = 'http://127.0.0.1:8002';
+  await loginApi(request);
+  await loginPage(page);
+  const c = await request.post(`${base}/clients`, { data: { name: `Synthetic sales browser ${Date.now()}` } });
+  expect(c.ok()).toBeTruthy();
+  const client = await c.json();
+  const r = await request.post(`${base}/clients/${client.id}/registrations`, { data: { gstin: 'DEMO-SALES-BROWSER' } });
+  const registration = await r.json();
+  const p = await request.post(`${base}/registrations/${registration.id}/periods`, { data: { period_code: '2026-08' } });
+  const period = await p.json();
+  await page.goto(`/periods/${period.id}/workspace`);
+  await page.getByRole('main').getByRole('link', { name: 'Sales preparation' }).click();
+  await expect(page.getByRole('heading', { name: 'Sales', exact: true })).toBeVisible();
+  await expect(page.getByText('No sales imports yet.', { exact: false })).toBeVisible();
+  const [template] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download sales template' }).click()]);
+  const templatePath = testInfo.outputPath('sales-template.csv'); await template.saveAs(templatePath);
+  expect(fs.readFileSync(templatePath, 'utf8').trim().split(',')).toEqual('record_id document_type customer_type customer_ref invoice_number invoice_date supply_scope place_of_supply taxable_value cgst sgst igst cess invoice_total description'.split(' '));
+  await expect(page.getByLabel('Sales CSV', { exact: true })).toBeEnabled();
+  await page.getByLabel('Sales CSV', { exact: true }).setInputFiles({ name: 'bad.csv', mimeType: 'text/csv', buffer: Buffer.from('wrong,header\n1,2') });
+  await expect(page.getByTestId('sales-error')).toContainText('Sales headers');
+  const file = path.join(root, 'sample_data/sales_v1/sales_register.csv');
+  await expect(page.getByLabel('Sales CSV', { exact: true })).toBeEnabled();
+  const batch = await post(page, '/sales-imports', () => page.getByLabel('Sales CSV', { exact: true }).setInputFiles(file));
+  for (const [label, value] of [['rows', 19], ['ready', 5], ['invalid', 8], ['duplicate', 4], ['unsupported', 2]] as const) await expect(page.getByTestId(`sales-count-${label}`)).toContainText(String(value));
+  await expect(page.getByRole('button', { name: 'Commit sales import' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Export sales working paper' })).toBeDisabled();
+  await page.getByRole('checkbox').check();
+  await page.getByLabel('Sales acknowledgement note', { exact: true }).fill('Intentional synthetic defects acknowledged');
+  await post(page, '/commit', () => page.getByRole('button', { name: 'Commit sales import' }).click());
+  await expect(page.getByText('Selected import: committed')).toBeVisible();
+  await page.getByLabel('Sales validation filter', { exact: true }).selectOption('ready');
+  await expect(page.getByRole('button', { name: 'Inspect sale', exact: true })).toHaveCount(5);
+  for (let i = 0; i < 5; i++) {
+    await page.getByRole('button', { name: 'Inspect sale', exact: true }).nth(i).click();
+    await page.getByLabel('Sales review note', { exact: true }).fill(`Synthetic ready source ${i + 1} checked`);
+    await post(page, '/review', () => page.getByRole('button', { name: 'Save sales review', exact: true }).click());
+    await expect(page.getByTestId('sales-included')).toHaveText(String(i + 1));
+    await page.keyboard.press('Escape');
+  }
+  await expect(page.getByTestId('sales-total-invoice_total')).toHaveText('2065.00');
+  await page.getByLabel('Sales validation filter', { exact: true }).selectOption('invalid');
+  await page.getByRole('button', { name: 'Inspect sale', exact: true }).first().click();
+  await expect(page.getByTestId('sales-detail')).toContainText('invalid_date');
+  await expect(page.getByLabel('Sales decision', { exact: true }).locator('option[value="reviewed"]')).toHaveJSProperty('disabled', true);
+  await page.getByLabel('Sales review note', { exact: true }).fill('Exclude malformed date from this draft');
+  await post(page, '/review', () => page.getByRole('button', { name: 'Save sales review', exact: true }).click());
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await page.getByLabel('Sales version', { exact: true }).selectOption(batch.id);
+  await expect(page.getByTestId('sales-total-invoice_total')).toHaveText('2065.00');
+  await page.getByRole('button', { name: 'Inspect sale', exact: true }).first().click();
+  await expect(page.getByTestId('sales-detail')).toContainText('Synthetic ready source 1 checked');
+  await page.getByLabel('Sales decision', { exact: true }).selectOption('unresolved');
+  await page.getByLabel('Sales review note', { exact: true }).fill('Reopen first sale for follow-up');
+  await post(page, '/review', () => page.getByRole('button', { name: 'Save sales review', exact: true }).click());
+  await expect(page.getByTestId('sales-total-invoice_total')).toHaveText('885.00');
+  await expect(page.getByTestId('sales-detail')).toContainText('Synthetic ready source 1 checked');
+  await expect(page.getByLabel('Sales CSV', { exact: true })).toBeEnabled();
+  const duplicate = await post(page, '/sales-imports', () => page.getByLabel('Sales CSV', { exact: true }).setInputFiles(file));
+  expect(duplicate.id).toBe(batch.id);
+  await expect(page.getByTestId('sales-total-invoice_total')).toHaveText('885.00');
+  await expect(page.getByLabel('Sales version', { exact: true }).locator('option')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export sales working paper' }).click()]);
+  const workbook = testInfo.outputPath('sales-working-paper.xlsx'); await download.saveAs(workbook);
+  execFileSync('python', ['-c', `from openpyxl import load_workbook; import sys; w=load_workbook(sys.argv[1]); assert len(w.sheetnames)==5; assert w['Sales Rows'].max_row==20; assert w['Review History'].max_row==8; assert dict(w['Included Totals'].values)['invoice_total']=='885.00'; assert dict(w['Summary'].values)['pending']=='14'; assert not any(c.data_type=='f' for s in w for r in s for c in r)`, workbook]);
+  await page.getByRole('button', { name: 'Inspect sale', exact: true }).first().click();
+  await page.screenshot({path:testInfo.outputPath('sales-desktop.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  await expectNoPageOverflow(page);
+  await page.screenshot({path:testInfo.outputPath('sales-mobile.png'),fullPage:true});
+});
