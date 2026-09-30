@@ -1,11 +1,11 @@
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
-import { loginApi, loginPage, worksheetStep, expectNoPageOverflow } from './auth';
+import { loginApi, loginPage, worksheetStep, expectNoPageOverflow, API_BASE } from './auth';
 import path from 'node:path';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const root = path.resolve(__dirname, '../..');
-const base = 'http://127.0.0.1:8002';
+const base = API_BASE;
 async function post(page: Page, part: string, action: () => Promise<unknown>) {
   const [response] = await Promise.all([page.waitForResponse(r => r.url().includes(part) && r.request().method() === 'POST' && r.status() !== 307), action()]);
   expect(response.ok(), await response.text()).toBeTruthy();

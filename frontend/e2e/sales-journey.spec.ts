@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { loginApi, loginPage, expectNoPageOverflow } from './auth';
+import { loginApi, loginPage, expectNoPageOverflow, API_BASE } from './auth';
 import path from 'node:path';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -12,7 +12,7 @@ async function post(page: Page, part: string, action: () => Promise<unknown>) {
 }
 
 test('Sales preparation preserves versions, reviews, source rows and export totals', async ({ page, request }, testInfo) => {
-  const base = 'http://127.0.0.1:8002';
+  const base = API_BASE;
   await loginApi(request);
   await loginPage(page);
   const c = await request.post(`${base}/clients`, { data: { name: `Synthetic sales browser ${Date.now()}` } });

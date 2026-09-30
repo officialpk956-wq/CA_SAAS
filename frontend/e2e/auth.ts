@@ -1,9 +1,13 @@
 import { expect, Page, APIRequestContext } from '@playwright/test';
 
-// Test-only login for the dedicated E2E database, set by scripts/serve_e2e.py. Not a real credential.
+// Locally: the dedicated E2E database with a test-only login set by scripts/serve_e2e.py (not a real credential).
+// Hosted (E2E_BASE_URL set): the journeys run against that site; the password comes only from E2E_ADMIN_PASSWORD.
+export const HOSTED = process.env.E2E_BASE_URL?.replace(/\/$/, '');
+export const WEB_BASE = HOSTED || 'http://127.0.0.1:3100';
+export const API_BASE = HOSTED ? `${HOSTED}/api` : 'http://127.0.0.1:8002';
 export const E2E_EMAIL = 'admin@demo.com';
+if (HOSTED && !process.env.E2E_ADMIN_PASSWORD) throw new Error('Set E2E_ADMIN_PASSWORD to test a hosted site.');
 export const E2E_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'e2e-synthetic-login-only';
-export const API_BASE = 'http://127.0.0.1:8002';
 
 /** Log the API request context in (for test setup calls made directly to the API). */
 export async function loginApi(request: APIRequestContext) {

@@ -153,7 +153,7 @@ Supabase holds the database, Render runs the FastAPI backend (`render.yaml`) and
 2. **Render**: choose **New → Blueprint** and pick this GitHub repository; `render.yaml` creates `gst-helper-api`. When asked, paste the Supabase URI as `DATABASE_URL`. Each start runs `alembic upgrade head`. Migration `c9a001` turns on row-level security on every table and removes Supabase's `anon`/`authenticated` access, so the Supabase Data API cannot read them. Check `https://<render-app>.onrender.com/health/ready`.
 3. **Firm login** (once, from your machine, with the same URI; values stay in your shell):
    ```bash
-   DATABASE_URL='<supabase session-pooler URI>' DATABASE_SSL=true python -m backend.gst_copilot.cli.seed
+   DATABASE_URL='<supabase session-pooler URI>' DATABASE_SSL=true python backend/gst_copilot/cli/seed.py
    DATABASE_URL='<supabase session-pooler URI>' DATABASE_SSL=true python scripts/firm_admin.py set-password admin@demo.com
    ```
 4. **Vercel**: create a project from the repository with **Root Directory** `frontend`. Set the environment variable `API_URL=https://<render-app>.onrender.com` (no trailing slash; it is read at build time, so redeploy after changing it).
