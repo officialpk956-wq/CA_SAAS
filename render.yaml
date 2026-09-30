@@ -1,0 +1,21 @@
+# Render Blueprint for the FastAPI backend (the Next.js frontend is deployed on Vercel from frontend/).
+# Secrets are never stored here: DATABASE_URL is entered in the Render dashboard (sync: false).
+services:
+  - type: web
+    name: gst-helper-api
+    runtime: python
+    region: singapore        # closest Render region to Supabase ap-south-1 (Mumbai)
+    plan: free               # sleeps after 15 min idle; first request then takes ~50 s
+    buildCommand: pip install -r requirements.txt
+    # Free plan has no pre-deploy command, so migrations run at start (Alembic is idempotent).
+    startCommand: python -m alembic upgrade head && uvicorn backend.gst_copilot.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health/ready
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.5"
+      - key: DATABASE_URL     # Supabase *session pooler* URI (port 5432), see doc/deploy
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: COOKIE_SECURE    # served over HTTPS
+        value: "true"

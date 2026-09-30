@@ -4,3 +4,7 @@ Mind/
 memory/
 doc/
 .env
+__pycache__/
+*.zip
+frontend/test-results/
+frontend/playwright-report/

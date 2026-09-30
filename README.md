@@ -145,3 +145,18 @@ Other commands: `rename-firm <email> "<name>"`, `disable <email>` (blocks login 
 How it works: passwords are hashed with scrypt; a login creates a server-side session (only a hash of the token is stored) and sets an HttpOnly, SameSite=Strict cookie. Sessions last 12 hours; logout ends them immediately; 5 wrong passwords lock that email for 15 minutes. Every API route except health checks and login requires a session. The browser reaches the API through the app's own `/api` proxy (`API_URL` in the frontend environment points it at FastAPI), so no CORS is needed; signed-out visitors are redirected to `/login`. Logins and logouts appear in History. `scripts/seed_demo_data.py` now signs in (password prompt or `GSTH_PASSWORD`).
 
 Not yet production-ready: no HTTPS configuration (set `COOKIE_SECURE=true` behind HTTPS), no password reset or self-service accounts, no multi-factor login, one role per firm, and the lockout counter is per API process.
+
+## Hosting: Supabase + Render + Vercel (synthetic demo)
+Supabase holds the database, Render runs the FastAPI backend (`render.yaml`) and Vercel serves the Next.js frontend. The browser only talks to Vercel; Vercel forwards `/api/*` to Render, so the login cookie stays same-site. Only synthetic data belongs here unless the firm authorises real client data and accepts Supabase's data-processing terms.
+
+1. **Supabase**: create a project in region *South Asia (Mumbai)*. Keep the database password private. Open **Connect** and copy the **Session pooler** URI (port 5432). Do not use the transaction pooler (port 6543), which breaks asyncpg, or the direct connection (IPv6-only; Render cannot reach it). URL-encode special characters in the password (`@`→`%40`, `#`→`%23`).
+2. **Render**: choose **New → Blueprint** and pick this GitHub repository; `render.yaml` creates `gst-helper-api`. When asked, paste the Supabase URI as `DATABASE_URL`. Each start runs `alembic upgrade head`. Migration `c9a001` turns on row-level security on every table and removes Supabase's `anon`/`authenticated` access, so the Supabase Data API cannot read them. Check `https://<render-app>.onrender.com/health/ready`.
+3. **Firm login** (once, from your machine, with the same URI; values stay in your shell):
+   ```bash
+   DATABASE_URL='<supabase session-pooler URI>' DATABASE_SSL=true python -m backend.gst_copilot.cli.seed
+   DATABASE_URL='<supabase session-pooler URI>' DATABASE_SSL=true python scripts/firm_admin.py set-password admin@demo.com
+   ```
+4. **Vercel**: create a project from the repository with **Root Directory** `frontend`. Set the environment variable `API_URL=https://<render-app>.onrender.com` (no trailing slash; it is read at build time, so redeploy after changing it).
+5. **Optional synthetic demo data**: `python scripts/seed_demo_data.py --api https://<render-app>.onrender.com` (it prompts for the password).
+
+Free-plan behaviour: Render sleeps after 15 idle minutes, so the first request can take about 50 s and may time out once while it wakes. Supabase pauses a free project after a week without activity. Uploaded CSVs are written to Render's temporary disk only while they are parsed; the parsed rows live in the database. The login throttle is in-process, so run one Render instance.
