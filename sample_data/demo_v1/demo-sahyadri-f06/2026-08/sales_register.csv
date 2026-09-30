@@ -1,0 +1,23 @@
+record_id,document_type,customer_type,customer_ref,invoice_number,invoice_date,supply_scope,place_of_supply,taxable_value,cgst,sgst,igst,cess,invoice_total,description
+SAL-001,invoice,unregistered,DEMO-CUST-035,INV-S08001,2026-08-14,domestic,DEMO-STATE-01,11830.00,1064.70,1064.70,0.00,0.00,13959.40,Bulk order to distributor
+SAL-002,invoice,registered,DEMO-CUST-032,INV-S08002,2026-08-04,domestic,DEMO-STATE-01,11820.00,709.20,709.20,0.00,0.00,13238.40,Bulk order to distributor
+SAL-003,invoice,registered,DEMO-CUST-038,INV-S08003,2026-08-26,domestic,DEMO-STATE-01,1000.00,60.00,60.00,0.00,0.00,1121.00,Retail counter sale
+SAL-004,invoice,registered,DEMO-CUST-017,INV-S08004,2026-08-08,domestic,DEMO-STATE-01,1870.00,112.20,112.20,0.00,0.00,2094.40,Retail counter sale
+SAL-005,invoice,registered,DEMO-CUST-039,INV-S08005,2026-08-13,domestic,DEMO-STATE-01,7390.00,665.10,665.10,0.00,0.00,8720.20,Annual maintenance contract
+SAL-006,invoice,unregistered,DEMO-CUST-018,INV-S08006,2026-08-14,domestic,DEMO-STATE-02,12360.00,0.00,0.00,1483.20,0.00,13843.20,Service invoice
+SAL-007,credit_note,unregistered,DEMO-CUST-039,INV-S08007,2026-08-04,domestic,DEMO-STATE-01,470.00,28.20,28.20,0.00,0.00,526.40,Annual maintenance contract
+SAL-008,invoice,unregistered,DEMO-CUST-037,INV-S08008,2026-08-07,domestic,DEMO-STATE-01,12700.00,762.00,762.00,0.00,0.00,14224.00,Annual maintenance contract
+SAL-009,invoice,registered,DEMO-CUST-003,INV-S08009,2026-08-17,domestic,DEMO-STATE-01,270.00,16.20,16.20,0.00,0.00,302.40,Retail counter sale
+SAL-010,invoice,registered,DEMO-CUST-029,INV-S08010,2026-08-03,domestic,DEMO-STATE-02,4990.00,0.00,0.00,598.80,0.00,5588.80,Service invoice
+SAL-011,invoice,unregistered,DEMO-CUST-011,INV-S08011,2026-08-08,domestic,DEMO-STATE-01,3490.00,209.40,209.40,0.00,0.00,3908.80,Service invoice
+SAL-012,invoice,unregistered,DEMO-CUST-031,INV-S08012,2026-08-23,domestic,DEMO-STATE-01,10980.00,274.50,274.50,0.00,0.00,11529.00,Service invoice
+SAL-013,invoice,registered,DEMO-CUST-005,INV-S08013,2026-08-15,domestic,DEMO-STATE-01,7420.00,445.20,445.20,0.00,0.00,8310.40,Online order dispatch
+SAL-014,invoice,registered,DEMO-CUST-026,INV-S08014,2026-08-20,domestic,DEMO-STATE-01,4740.00,426.60,426.60,0.00,0.00,5593.20,Annual maintenance contract
+SAL-015,invoice,unregistered,DEMO-CUST-013,INV-S08015,2026-08-21,domestic,DEMO-STATE-01,7610.00,684.90,684.90,0.00,0.00,8979.80,Retail counter sale
+SAL-016,invoice,unregistered,DEMO-CUST-017,INV-S08016,2026-08-04,domestic,DEMO-STATE-01,12100.00,726.00,726.00,0.00,0.00,13552.00,Retail counter sale
+SAL-017,invoice,registered,DEMO-CUST-039,INV-S08017,2026-08-05,domestic,DEMO-STATE-01,9220.00,553.20,553.20,0.00,0.00,10326.40,Retail counter sale
+SAL-018,invoice,registered,DEMO-CUST-031,INV-S08018,2026-08-12,domestic,DEMO-STATE-01,8920.00,802.80,802.80,0.00,0.00,10525.60,Bulk order to distributor
+SAL-019,invoice,unregistered,DEMO-CUST-012,INV-S08019,2026-08-23,domestic,DEMO-STATE-01,6460.00,581.40,581.40,0.00,0.00,7622.80,Annual maintenance contract
+SAL-020,invoice,registered,DEMO-CUST-005,INV-S08020,2026-08-25,domestic,DEMO-STATE-01,10780.00,970.20,970.20,0.00,0.00,12720.40,Annual maintenance contract
+SAL-021,invoice,registered,DEMO-CUST-006,INV-S08021,2026-08-11,domestic,DEMO-STATE-01,5580.00,139.50,139.50,0.00,0.00,5859.00,Retail counter sale
+SAL-022,invoice,registered,DEMO-CUST-039,INV-S08005,2026-08-13,domestic,DEMO-STATE-01,7390.00,665.10,665.10,0.00,0.00,8720.20,Annual maintenance contract

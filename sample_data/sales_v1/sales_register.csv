@@ -1,0 +1,20 @@
+record_id,document_type,customer_type,customer_ref,invoice_number,invoice_date,supply_scope,place_of_supply,taxable_value,cgst,sgst,igst,cess,invoice_total,description
+SALE-001,invoice,registered,DEMO-CUST-001,S-001,2026-08-01,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-002,invoice,unregistered,DEMO-CUST-001,S-002,2026-08-01,domestic,DEMO-STATE-01,500.00,0.00,0.00,90.00,0.00,590.00,Synthetic domestic invoice
+SALE-003,invoice,registered,DEMO-CUST-001,S-003,2026-08-01,domestic,DEMO-STATE-01,250.00,22.50,22.50,0.00,0.00,295.00,Synthetic domestic invoice
+SALE-004,invoice,registered,DEMO-CUST-001,S-004,2026-08-01,domestic,DEMO-STATE-01,0.00,0.00,0.00,0.00,0.00,0.00,Synthetic domestic invoice
+SALE-005,invoice,registered,DEMO-CUST-001,DUP-001,2026-08-01,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-006,invoice,registered,DEMO-CUST-001,DUP-001,2026-08-01,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-007,invoice,registered,DEMO-CUST-001,S-007,31-08-2026,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-008,invoice,registered,DEMO-CUST-001,S-008,2026-07-31,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-009,invoice,registered,DEMO-CUST-001,S-009,2026-08-01,domestic,DEMO-STATE-01,oops,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-010,invoice,registered,DEMO-CUST-001,S-010,2026-08-01,domestic,DEMO-STATE-01,-1.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-011,invoice,registered,DEMO-CUST-001,S-011,2026-08-01,domestic,DEMO-STATE-01,1000.001,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-012,invoice,registered,DEMO-CUST-001,S-012,2026-08-01,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1000.00,Synthetic domestic invoice
+SALE-013,invoice,registered,,S-013,2026-08-01,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-014,credit_note,registered,DEMO-CUST-001,S-014,2026-08-01,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-015,invoice,registered,DEMO-CUST-001,S-015,2026-08-01,export,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-DUP,invoice,registered,DEMO-CUST-001,S-016,2026-08-01,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-DUP,invoice,registered,DEMO-CUST-001,S-017,2026-08-01,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-018,invoice,registered,DEMO-CUST-001,S-018,2026-08-01,domestic,,1000.00,90.00,90.00,0.00,0.00,1180.00,Synthetic domestic invoice
+SALE-019,invoice,registered,DEMO-CUST-001,S-019,2026-08-01,domestic,DEMO-STATE-01,0.00,0.00,0.00,0.00,0.00,0.00,"=HYPERLINK(""https://example.invalid"",""Synthetic text only"")"

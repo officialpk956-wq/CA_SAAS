@@ -1,0 +1,324 @@
+[
+  {
+    "result_id": "RES-DC75DF655E47A8CD",
+    "status": "amount_mismatch",
+    "purchase_record_ids": [
+      "PUR-010"
+    ],
+    "statement_record_ids": [
+      "STMT-010"
+    ],
+    "reason": "Amount mismatch.",
+    "field_differences": {
+      "taxable_value": "-200.00",
+      "invoice_total": "-200.00"
+    },
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-E61EB40FEC3AAA9D",
+    "status": "amount_mismatch",
+    "purchase_record_ids": [
+      "PUR-011"
+    ],
+    "statement_record_ids": [
+      "STMT-011"
+    ],
+    "reason": "Amount mismatch.",
+    "field_differences": {
+      "cgst": "-10.00",
+      "sgst": "-10.00",
+      "invoice_total": "-20.00"
+    },
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-2B870C13D15DA537",
+    "status": "amount_mismatch",
+    "purchase_record_ids": [
+      "PUR-012"
+    ],
+    "statement_record_ids": [
+      "STMT-012"
+    ],
+    "reason": "Amount mismatch.",
+    "field_differences": {
+      "cgst": "180.00",
+      "sgst": "180.00",
+      "igst": "-360.00"
+    },
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-C5C09D773EF26D5A",
+    "status": "books_only",
+    "purchase_record_ids": [
+      "PUR-006"
+    ],
+    "statement_record_ids": [],
+    "reason": "Valid counterpart is unmatched in statement.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-8645DFF9398A392B",
+    "status": "books_only",
+    "purchase_record_ids": [
+      "PUR-007"
+    ],
+    "statement_record_ids": [],
+    "reason": "Valid counterpart is unmatched in statement.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-D8A35DDE56A7016B",
+    "status": "books_only",
+    "purchase_record_ids": [
+      "PUR-016"
+    ],
+    "statement_record_ids": [],
+    "reason": "Valid counterpart is unmatched in statement.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-30D045D2D3B5CD4E",
+    "status": "date_conflict",
+    "purchase_record_ids": [
+      "PUR-020"
+    ],
+    "statement_record_ids": [
+      "STMT-020"
+    ],
+    "reason": "Dates differ.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-9DAD781221B1F186",
+    "status": "duplicate_candidate",
+    "purchase_record_ids": [
+      "PUR-013A",
+      "PUR-013B"
+    ],
+    "statement_record_ids": [
+      "STMT-013"
+    ],
+    "reason": "Duplicate records found for this identity.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-84A35E90B2DCE480",
+    "status": "duplicate_candidate",
+    "purchase_record_ids": [
+      "PUR-014"
+    ],
+    "statement_record_ids": [
+      "STMT-014A",
+      "STMT-014B"
+    ],
+    "reason": "Duplicate records found for this identity.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-92C94FCA0BA0F034",
+    "status": "matched",
+    "purchase_record_ids": [
+      "PUR-001"
+    ],
+    "statement_record_ids": [
+      "STMT-001"
+    ],
+    "reason": "Exact match.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-7CF3352B1BDEC0FF",
+    "status": "matched",
+    "purchase_record_ids": [
+      "PUR-002"
+    ],
+    "statement_record_ids": [
+      "STMT-002"
+    ],
+    "reason": "Exact match.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-AFC9A1A7613A6C54",
+    "status": "matched",
+    "purchase_record_ids": [
+      "PUR-003"
+    ],
+    "statement_record_ids": [
+      "STMT-003"
+    ],
+    "reason": "Exact match.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-7D4B56184F7381E5",
+    "status": "matched",
+    "purchase_record_ids": [
+      "PUR-004"
+    ],
+    "statement_record_ids": [
+      "STMT-004"
+    ],
+    "reason": "Exact match.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-9618DAADDE8B7BD7",
+    "status": "matched",
+    "purchase_record_ids": [
+      "PUR-005"
+    ],
+    "statement_record_ids": [
+      "STMT-005"
+    ],
+    "reason": "Exact match.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-C971A29CF587242C",
+    "status": "matched",
+    "purchase_record_ids": [
+      "PUR-019A"
+    ],
+    "statement_record_ids": [
+      "STMT-019A"
+    ],
+    "reason": "Exact match.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-611AEA1C44843E49",
+    "status": "matched",
+    "purchase_record_ids": [
+      "PUR-019B"
+    ],
+    "statement_record_ids": [
+      "STMT-019B"
+    ],
+    "reason": "Exact match.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-F7F7EB9B7E79154F",
+    "status": "statement_only",
+    "purchase_record_ids": [],
+    "statement_record_ids": [
+      "STMT-008"
+    ],
+    "reason": "Valid counterpart is unmatched in purchases.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-EF422138C258A3B0",
+    "status": "statement_only",
+    "purchase_record_ids": [],
+    "statement_record_ids": [
+      "STMT-009"
+    ],
+    "reason": "Valid counterpart is unmatched in purchases.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-C91DBA75CB79C904",
+    "status": "statement_only",
+    "purchase_record_ids": [],
+    "statement_record_ids": [
+      "STMT-015"
+    ],
+    "reason": "Valid counterpart is unmatched in purchases.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-78A0288C1558A567",
+    "status": "statement_only",
+    "purchase_record_ids": [],
+    "statement_record_ids": [
+      "STMT-017"
+    ],
+    "reason": "Valid counterpart is unmatched in purchases.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-41F94F82FD9C0803",
+    "status": "statement_only",
+    "purchase_record_ids": [],
+    "statement_record_ids": [
+      "STMT-018"
+    ],
+    "reason": "Valid counterpart is unmatched in purchases.",
+    "field_differences": {},
+    "validation_issues": []
+  },
+  {
+    "result_id": "RES-F90F9AC196CB518B",
+    "status": "validation_error",
+    "purchase_record_ids": [],
+    "statement_record_ids": [
+      "STMT-016"
+    ],
+    "reason": "Invalid date format, must be YYYY-MM-DD.",
+    "field_differences": {},
+    "validation_issues": [
+      "Invalid date format, must be YYYY-MM-DD."
+    ]
+  },
+  {
+    "result_id": "RES-6FCB7680E7E05E51",
+    "status": "validation_error",
+    "purchase_record_ids": [
+      "PUR-015"
+    ],
+    "statement_record_ids": [],
+    "reason": "Missing invoice_number.",
+    "field_differences": {},
+    "validation_issues": [
+      "Missing invoice_number."
+    ]
+  },
+  {
+    "result_id": "RES-392554C28FED567B",
+    "status": "validation_error",
+    "purchase_record_ids": [
+      "PUR-017"
+    ],
+    "statement_record_ids": [],
+    "reason": "Invalid numeric format or negative value.",
+    "field_differences": {},
+    "validation_issues": [
+      "Invalid numeric format or negative value."
+    ]
+  },
+  {
+    "result_id": "RES-1F2AA6B4F60FAB34",
+    "status": "validation_error",
+    "purchase_record_ids": [
+      "PUR-018"
+    ],
+    "statement_record_ids": [],
+    "reason": "invoice_total does not match the sum of components.",
+    "field_differences": {},
+    "validation_issues": [
+      "invoice_total does not match the sum of components."
+    ]
+  }
+]

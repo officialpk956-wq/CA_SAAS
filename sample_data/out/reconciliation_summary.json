@@ -1,0 +1,20 @@
+{
+  "purchase_rows_total": 20,
+  "statement_rows_total": 20,
+  "purchase_rows_valid": 17,
+  "purchase_rows_invalid": 3,
+  "statement_rows_valid": 19,
+  "statement_rows_invalid": 1,
+  "distinct_results_by_status": {
+    "amount_mismatch": 3,
+    "books_only": 3,
+    "date_conflict": 1,
+    "duplicate_candidate": 2,
+    "matched": 7,
+    "statement_only": 5,
+    "validation_error": 4
+  },
+  "matched_pair_count": 7,
+  "duplicate_group_count": 2,
+  "unique_source_rows_accounted_for": 40
+}

@@ -1,0 +1,26 @@
+record_id,document_type,supplier_ref,invoice_number,invoice_date,taxable_value,cgst,sgst,igst,cess,invoice_total,description
+P-001,invoice,DEMO-SUP-001,INV-07001,2026-07-05,2910.00,0.00,0.00,349.20,0.00,3259.20,Corrugated cartons for dispatch
+P-002,invoice,DEMO-SUP-002,INV-07002,2026-07-28,1410.00,126.90,126.90,0.00,0.00,1663.80,Network cabling work
+P-003,invoice,DEMO-SUP-003,INV-07003,2026-07-18,6360.00,381.60,381.60,0.00,0.00,7123.20,Courier charges for documents
+P-004,invoice,DEMO-SUP-004,INV-07004,2026-07-03,3390.00,305.10,305.10,0.00,0.00,4000.20,Packaging boxes for dispatch
+P-005,invoice,DEMO-SUP-005,INV-07005,2026-07-23,2070.00,124.20,124.20,0.00,0.00,2318.40,Audit support services
+P-006,invoice,DEMO-SUP-001,INV-07006,2026-07-20,380.00,0.00,0.00,68.40,0.00,448.40,Office stationery refill
+P-007,invoice,DEMO-SUP-002,INV-07007,2026-07-24,3810.00,228.60,228.60,0.00,0.00,4267.20,Laptop repair and servicing
+P-008,invoice,DEMO-SUP-003,INV-07008,2026-07-20,4500.00,0.00,0.00,225.00,0.00,4725.00,Courier charges for documents
+P-009,invoice,DEMO-SUP-004,INV-07009,2026-07-27,7840.00,0.00,0.00,940.80,0.00,8780.80,Office cleaning services
+P-010,invoice,DEMO-SUP-005,INV-07010,2026-13-01,4330.00,389.70,389.70,0.00,0.00,5109.40,Advisory retainer
+P-011,invoice,DEMO-SUP-001,INV-07011,2026-07-28,4750.00,118.75,118.75,0.00,0.00,4987.50,Printer paper A4 reams
+P-012,invoice,DEMO-SUP-002,INV-07012,2026-07-15,1240.00,74.40,74.40,0.00,0.00,1388.80,Laptop repair and servicing
+P-013,invoice,DEMO-SUP-003,INV-07013,2026-07-20,1270.00,0.00,0.00,152.40,0.00,1422.40,Freight delivery to warehouse
+P-014,invoice,DEMO-SUP-004,INV-07014,2026-07-17,3750.00,93.75,93.75,0.00,0.00,3937.50,Packaging boxes for dispatch
+P-015,invoice,DEMO-SUP-005,INV-07015,2026-07-26,3270.00,0.00,0.00,588.60,0.00,3858.60,Professional consulting fees
+P-016,invoice,DEMO-SUP-001,INV-07016,2026-07-02,2060.00,51.50,51.50,0.00,0.00,2163.00,Office stationery refill
+P-017,invoice,DEMO-SUP-002,INV-07017,2026-07-24,7690.00,461.40,461.40,0.00,0.00,8612.80,Annual software support
+P-018,invoice,DEMO-SUP-003,INV-07018,2026-07-20,5130.00,0.00,0.00,923.40,0.00,6053.40,Inbound freight delivery
+P-019,invoice,DEMO-SUP-004,INV-07019,2026-07-26,5970.00,0.00,0.00,716.40,0.00,6686.40,Pest control visit
+P-020,invoice,DEMO-SUP-005,INV-07020,2026-07-09,6630.00,165.75,165.75,0.00,0.00,6961.50,Professional consulting fees
+P-021,invoice,DEMO-SUP-001,INV-07021,2026-07-16,5340.00,0.00,0.00,267.00,0.00,5607.00,Printer paper A4 reams
+P-022,invoice,DEMO-SUP-002,INV-07022,2026-07-25,3470.00,312.30,312.30,0.00,0.00,4094.60,Network cabling work
+P-023,invoice,DEMO-SUP-003,INV-07023,2026-07-21,400.00,10.00,10.00,0.00,0.00,420.00,Freight delivery to warehouse
+P-024,invoice,DEMO-SUP-004,INV-07024,2026-07-22,970.00,58.20,58.20,0.00,0.00,1086.40,Office cleaning services
+P-025,invoice,DEMO-SUP-003,INV-07008,2026-07-20,4500.00,0.00,0.00,225.00,0.00,4725.00,Courier charges for documents
