@@ -26,11 +26,13 @@ from backend.gst_copilot.api.dependencies import get_current_user
 from backend.gst_copilot.db.models import User, Client, Organization
 from backend.gst_copilot.config import settings
 
-sync_engine = create_engine(SYNC_TEST_DB_URL)
+# A short connect timeout so a stopped PostgreSQL fails fast instead of hanging the run.
+CONNECT = {'connect_timeout': 5}
+sync_engine = create_engine(SYNC_TEST_DB_URL, connect_args=CONNECT)
 
 @pytest_asyncio.fixture
 async def engine():
-    test_engine = create_async_engine(TEST_DB_URL, echo=False, poolclass=NullPool)
+    test_engine = create_async_engine(TEST_DB_URL, echo=False, poolclass=NullPool, connect_args=CONNECT)
     yield test_engine
     await test_engine.dispose()
 
@@ -73,6 +75,12 @@ async def client(test_db_session, mock_user_session):
 @pytest.fixture(autouse=True)
 def setup_db():
     assert sync_engine.url.database == "gst_copilot_test", "Refusing to reset a non-test database"
+    from sqlalchemy.exc import OperationalError
+    try:
+        with sync_engine.connect(): pass
+    except OperationalError:
+        pytest.exit("PostgreSQL is not reachable on localhost:5432. Start it (WSL: `wsl -d Codex-PTCG-Validation -u root -- service postgresql start`, "
+                    "or `docker compose up -d db`) and rerun. Integration tests stopped instead of hanging.", returncode=1)
     Base.metadata.drop_all(bind=sync_engine)
     Base.metadata.create_all(bind=sync_engine)
     yield
@@ -1251,21 +1259,22 @@ async def test_gstr2b_json_import_reconciles_against_gstin_purchase_register(cli
     r = await client.post(f'/periods/{period}/imports/gstr2b', files={'file': ('GSTR2B_082026.json', sample)})
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body['batch']['record_count'] == 3 and body['batch']['invalid_count'] == 0 and body['conversion']['converted'] == 3
-    assert len(body['conversion']['skipped']) == 3 and body['conversion']['itc_unavailable'][0]['record_id'] == '2B-0002'
+    assert body['batch']['record_count'] == 5 and body['batch']['invalid_count'] == 0 and body['conversion']['converted'] == 5
+    assert len(body['conversion']['skipped']) == 2 and body['conversion']['itc_unavailable'][0]['record_id'] == '2B-0002'
     statement = body['batch']['id']
     assert (await client.post(f'/imports/{statement}/commit')).status_code == 200
-    # Purchase register keyed by the same GSTINs: two match exactly, one is books-only.
+    # Purchase register keyed by the same GSTINs: two invoices and the credit note match exactly, one is books-only.
     purchases = ('record_id,document_type,supplier_ref,invoice_number,invoice_date,taxable_value,cgst,sgst,igst,cess,invoice_total,description\n'
                  'P-1,invoice,00BBBBB1111B1Z1,SUP1/001,2026-08-03,2000.00,180.00,180.00,0.00,0.00,2360.00,Stationery\n'
                  'P-2,invoice,00CCCCC2222C1Z2,0043,2026-08-15,1000.00,0.00,0.00,120.00,1.00,1121.00,Freight\n'
-                 'P-3,invoice,00CCCCC2222C1Z2,0044,2026-08-20,500.00,45.00,45.00,0.00,0.00,590.00,Not filed by supplier\n').encode()
+                 'P-3,invoice,00CCCCC2222C1Z2,0044,2026-08-20,500.00,45.00,45.00,0.00,0.00,590.00,Not filed by supplier\n'
+                 'P-4,credit_note,00BBBBB1111B1Z1,CN-1,2026-08-20,100.00,0.00,0.00,18.00,0.00,118.00,Price reduction\n').encode()
     p = (await client.post(f'/periods/{period}/imports', params={'source_type': 'purchase'}, files={'file': ('p.csv', purchases)})).json()
     assert p['invalid_count'] == 0  # GSTIN-shaped supplier references validate
     await client.post(f"/imports/{p['id']}/commit")
     run = (await client.post(f'/periods/{period}/reconciliation-runs', json={'purchase_batch_id': p['id'], 'statement_batch_id': statement})).json()
     counts = run['summary_data']['distinct_results_by_status']
-    assert counts.get('matched') == 2 and counts.get('books_only') == 1 and counts.get('statement_only') == 1
+    assert counts.get('matched') == 3 and counts.get('books_only') == 1 and counts.get('statement_only') == 2  # SUP1/002 and the debit note DN-7
     assert 'gstr2b_converted' in {e['action'] for e in (await client.get('/audit-events', params={'limit': 200})).json()}
     # Wrong month and non-2B files are refused with a reason.
     bad = await client.post(f'/periods/{period}/imports/gstr2b', files={'file': ('x.json', b'{"a": 1}')})
@@ -1372,3 +1381,125 @@ async def test_client_upload_links_and_reminder_drafts(client, mock_user_session
         assert (await client.post(f"/upload-links/{one['id']}/revoke")).status_code == 404
     finally:
         app.dependency_overrides[get_current_user] = mock_user_session
+
+
+@pytest.mark.asyncio
+async def test_password_change_and_owner_reset_end_the_right_sessions(anon_client, test_db_session):
+    _make_user('owner@pw.example', 'first-synthetic-pass')
+    login = lambda c, email, pw: c.post('/auth/login', json={'email': email, 'password': pw})
+    assert (await login(anon_client, 'owner@pw.example', 'first-synthetic-pass')).status_code == 200
+    async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as other, AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as member_client:
+        assert (await login(other, 'owner@pw.example', 'first-synthetic-pass')).status_code == 200
+        change = lambda cur, new: anon_client.post('/auth/password', json={'current_password': cur, 'new_password': new})
+        assert (await change('wrong-password-x', 'second-synthetic-pass')).status_code == 400
+        assert (await change('first-synthetic-pass', 'first-synthetic-pass')).status_code == 400
+        assert (await change('first-synthetic-pass', 'short')).status_code == 400
+        done = await change('first-synthetic-pass', 'second-synthetic-pass')
+        assert done.status_code == 200 and done.json()['other_sessions_ended'] == 1
+        assert (await anon_client.get('/auth/me')).status_code == 200      # this browser stays signed in
+        assert (await other.get('/auth/me')).status_code == 401           # the other one is signed out
+        assert (await login(other, 'owner@pw.example', 'first-synthetic-pass')).status_code == 401
+        assert (await login(other, 'owner@pw.example', 'second-synthetic-pass')).status_code == 200
+
+        member = (await anon_client.post('/firm/users', json={'email': 'member@pw.example', 'display_name': 'Member', 'role': 'preparer', 'initial_password': 'member-initial-pass'})).json()
+        assert (await login(member_client, 'member@pw.example', 'member-initial-pass')).status_code == 200
+        reset = await anon_client.post(f"/firm/users/{member['id']}/password", json={'new_password': 'member-temp-pass-2'})
+        assert reset.status_code == 200
+        assert (await member_client.get('/auth/me')).status_code == 401   # all the member's sessions ended
+        assert (await login(member_client, 'member@pw.example', 'member-temp-pass-2')).status_code == 200
+        assert (await member_client.post(f"/firm/users/{member['id']}/password", json={'new_password': 'not-allowed-123'})).status_code == 403  # preparer
+        me = (await anon_client.get('/auth/me')).json()
+        assert (await anon_client.post(f"/firm/users/{me['id']}/password", json={'new_password': 'self-reset-123'})).status_code == 400
+        events = (await anon_client.get('/audit-events', params={'limit': 200})).json()
+        assert {'password_changed', 'password_reset_by_owner'} <= {e['action'] for e in events}
+        assert not any('pass' in (e['summary'] or '') and 'synthetic' in (e['summary'] or '') for e in events)
+
+
+@pytest.mark.asyncio
+async def test_excel_uploads_match_the_csv_uploads(client):
+    """An Excel copy of the synthetic registers gives the same rows and statuses as the CSV; the workbook is kept by hash."""
+    import csv, hashlib
+    from io import BytesIO, StringIO
+    from pathlib import Path
+    from openpyxl import Workbook
+    from backend.gst_copilot.xlsx import MONEY
+
+    def as_xlsx(path):
+        rows = list(csv.reader(StringIO(Path(path).read_text(encoding='utf-8-sig'))))
+        book = Workbook(); sheet = book.active; sheet.append(rows[0])
+        for r in rows[1:]:
+            cells = []
+            for h, v in zip(rows[0], r):
+                try: cells.append(float(v) if h in MONEY else v)
+                except ValueError: cells.append(v)
+            sheet.append(cells)
+        out = BytesIO(); book.save(out); return out.getvalue()
+
+    csv_period, xlsx_period = await _period(client, 'Excel csv'), await _period(client, 'Excel xlsx')
+    purchase = 'sample_data/v1/purchase_register.csv'
+    a = (await client.post(f'/periods/{csv_period}/imports', params={'source_type': 'purchase'}, files={'file': ('p.csv', Path(purchase).read_bytes())})).json()
+    workbook = as_xlsx(purchase)
+    b = (await client.post(f'/periods/{xlsx_period}/imports', params={'source_type': 'purchase'}, files={'file': ('p.xlsx', workbook)})).json()
+    assert (a['record_count'], a['invalid_count']) == (b['record_count'], b['invalid_count'])
+    assert list(Path(settings.STORAGE_DIR).rglob(f'{hashlib.sha256(workbook).hexdigest()}.xlsx'))
+
+    sales = 'sample_data/sales_v1/sales_register.csv'
+    s1 = (await client.post(f'/periods/{csv_period}/sales-imports', files={'file': ('s.csv', Path(sales).read_bytes())})).json()
+    s2 = (await client.post(f'/periods/{xlsx_period}/sales-imports', files={'file': ('s.xlsx', as_xlsx(sales))})).json()
+    assert 'converted from Excel' in s2['filename']
+    one = (await client.get(f"/sales-imports/{s1['id']}", params={'limit': 100})).json()
+    two = (await client.get(f"/sales-imports/{s2['id']}", params={'limit': 100})).json()
+    assert one['summary'] == two['summary']
+
+    # A file that only looks like a workbook is refused and leaves nothing behind.
+    storage = Path(settings.STORAGE_DIR); before = sorted(storage.rglob('*')) if storage.exists() else []
+    bad = await client.post(f'/periods/{xlsx_period}/imports', params={'source_type': 'purchase'}, files={'file': ('bad.xlsx', b'PK\x03\x04 broken')})
+    assert bad.status_code == 400 and 'Excel' in bad.json()['detail']
+    assert (sorted(storage.rglob('*')) if storage.exists() else []) == before
+
+
+@pytest.mark.asyncio
+async def test_credit_and_debit_notes_flow_through_reconciliation_and_worksheet(client):
+    """Synthetic, hand-computed. A purchase credit note reduces claimed credit; sales notes reduce/increase output tax."""
+    from tests.test_notes import V2
+    period = await _period(client, 'Notes client')
+    head = 'record_id,document_type,supplier_ref,invoice_number,invoice_date,taxable_value,cgst,sgst,igst,cess,invoice_total'
+    rows = ['{}-1,invoice,00BBBBB1111B1Z1,INV-1,2026-08-03,1000.00,90.00,90.00,0.00,0.00,1180.00',
+            '{}-2,credit_note,00BBBBB1111B1Z1,CN-1,2026-08-20,100.00,9.00,9.00,0.00,0.00,118.00']
+    b = {}
+    for kind, prefix, extra in (('purchase', 'P', ',description'), ('statement', 'S', '')):
+        body = head + extra + '\n' + '\n'.join(r.format(prefix) + (',Synthetic' if extra else '') for r in rows) + '\n'
+        res = (await client.post(f'/periods/{period}/imports', params={'source_type': kind}, files={'file': (f'{kind}.csv', body.encode())})).json()
+        assert res['invalid_count'] == 0, res
+        b[kind] = res['id']; await client.post(f"/imports/{b[kind]}/commit")
+    run = (await client.post(f'/periods/{period}/reconciliation-runs', json={'purchase_batch_id': b['purchase'], 'statement_batch_id': b['statement']})).json()
+    assert run['summary_data']['distinct_results_by_status'] == {'matched': 2}
+    suggestions = (await client.get(f"/runs/{run['id']}/itc-suggestions")).json()['suggestions']
+    assert {s['decision'] for s in suggestions} == {'claim'} and any('Credit note' in s['reason'] for s in suggestions)
+
+    # Holding back the credit note is not "credit left unclaimed".
+    results = (await client.get(f"/runs/{run['id']}/itc-decisions")).json()
+    note_result = next(r['result_id'] for r in results if 'P-2' in r['purchase_record_ids'])
+    items = [{'result_id': r['result_id'], 'decision': 'deferred' if r['result_id'] == note_result else 'claim'} for r in results]
+    assert (await client.post(f"/runs/{run['id']}/itc-decisions", json={'items': items, 'note': 'Synthetic'})).status_code == 200
+    kinds = {i['kind'] for i in (await client.get(f'/periods/{period}/savings')).json()['items']}
+    assert 'matched_not_claimed' not in kinds
+    previous = next(r for r in (await client.get(f"/runs/{run['id']}/itc-decisions")).json() if r['result_id'] == note_result)
+    change = {'result_id': note_result, 'decision': 'claim', 'previous_decision_id': previous['previous_decision_id']}
+    assert previous['itc_at_stake'] == '-18.00'  # a credit note reduces credit
+    assert (await client.post(f"/runs/{run['id']}/itc-decisions", json={'items': [change], 'note': 'Include the credit note'})).status_code == 200
+
+    sales = (await client.post(f'/periods/{period}/sales-imports', files={'file': ('v2.csv', V2.encode())})).json()['id']
+    await client.post(f'/sales-imports/{sales}/commit', json={'note': 'Synthetic'})
+    for row in (await client.get(f'/sales-imports/{sales}', params={'limit': 100})).json()['items']:
+        assert row['validation_status'] == 'ready'
+        await client.post(f"/sales-imports/{sales}/rows/{row['id']}/review", json={'decision': 'reviewed', 'note': 'Synthetic'})
+    ws = (await client.get(f'/periods/{period}/worksheet', params={'sales_batch_id': sales, 'run_id': run['id']})).json()
+    assert ws['blockers'] == [], ws['blockers']
+    cgst = ws['payload']['worksheet']['heads']['cgst']
+    # Output 90 - 18 - 4.50 = 67.50; credit 90 - 9 = 81.00; net -13.50
+    assert (cgst['output_tax'], cgst['itc_claimed'], cgst['net']) == ('67.50', '81.00', '-13.50')
+    assert ws['payload']['worksheet']['heads']['igst']['output_tax'] == '18.00'  # the debit note adds
+    assert {o['ref']: o.get('document_type') for o in ws['payload']['inputs']['output']} == {'N-1': None, 'N-2': 'credit_note', 'N-3': 'debit_note', 'N-4': 'credit_note'}
+    gstr1 = (await client.get(f'/sales-imports/{sales}/gstr1')).json()
+    assert [n['nt_num'] for c in gstr1['document']['cdnr'] for n in c['nt']] == ['CN-1', 'DN-1']

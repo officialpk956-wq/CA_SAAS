@@ -57,8 +57,8 @@ test('GSTR-2B JSON: converted on upload, with a report of what was not imported'
   await page.goto(`/periods/${period.id}/workspace`);
   await post(page, '/imports/gstr2b', () => page.getByLabel('GSTR-2B JSON').setInputFiles(path.join(root, 'tests/fixtures/gstr2b_v1/sample_gstr2b.json')));
   const report = page.getByTestId('gstr2b-conversion');
-  await expect(report).toContainText('3 invoice(s) converted');
+  await expect(report).toContainText('5 document(s) converted');
   await expect(report).toContainText('reverse charge');
   await expect(report).toContainText('2B-0002 (P)');
-  await expect(page.getByTestId('batch-statement')).toContainText('3');
+  await expect(page.getByTestId('batch-statement')).toContainText('5');
 });
