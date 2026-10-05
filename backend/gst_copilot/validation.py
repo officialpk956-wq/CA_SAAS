@@ -4,6 +4,8 @@ from decimal import Decimal, InvalidOperation
 from typing import Set, Tuple, Union, List
 from .models import SourceRow, ValidatedInvoice, ValidationIssue
 
+GSTIN_SHAPE = re.compile(r'\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]')
+
 def parse_decimal(value_str: str) -> Decimal:
     """Parse a strict decimal. No blanks, no currency symbols, no commas."""
     if not value_str or not value_str.strip():
@@ -40,7 +42,8 @@ def validate_row(row: SourceRow, valid_suppliers: Set[str]) -> Union[ValidatedIn
     if not invoice_number:
         return ValidationIssue(row, "Missing invoice_number.")
     
-    if supplier_ref not in valid_suppliers:
+    # Demo supplier list, or a GSTIN-shaped reference (format check only; no checksum, no portal lookup).
+    if supplier_ref not in valid_suppliers and not GSTIN_SHAPE.fullmatch(supplier_ref):
         return ValidationIssue(row, f"Supplier reference '{supplier_ref}' not found in supplier list.")
         
     if document_type != "invoice":

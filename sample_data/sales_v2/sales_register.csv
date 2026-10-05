@@ -1,0 +1,9 @@
+record_id,document_type,customer_type,customer_ref,invoice_number,invoice_date,supply_scope,place_of_supply,taxable_value,cgst,sgst,igst,cess,invoice_total,description,customer_gstin,pos_state_code,rate,hsn_code,uqc,quantity
+S2-001,invoice,registered,DEMO-CUST-101,INV-201,2026-08-02,domestic,DEMO-STATE-01,1000.00,90.00,90.00,0.00,0.00,1180.00,Corrugated boxes,00DDDDD3333D1Z3,00,18,4819,NOS,100
+S2-002,invoice,registered,DEMO-CUST-101,INV-202,2026-08-05,domestic,DEMO-STATE-01,500.00,30.00,30.00,0.00,0.00,560.00,Corrugated boxes (12%),00DDDDD3333D1Z3,00,12,4819,NOS,50
+S2-003,invoice,registered,DEMO-CUST-102,INV-203,2026-08-07,domestic,DEMO-STATE-02,2000.00,0.00,0.00,360.00,0.00,2360.00,Laptop,00EEEEE4444E1Z4,01,18,8471,NOS,2
+S2-004,invoice,unregistered,DEMO-CUST-201,INV-204,2026-08-09,domestic,DEMO-STATE-01,300.00,27.00,27.00,0.00,0.00,354.00,Boxes counter sale,,00,18,4819,NOS,30
+S2-005,invoice,unregistered,DEMO-CUST-202,INV-205,2026-08-11,domestic,DEMO-STATE-01,200.00,18.00,18.00,0.00,0.00,236.00,Boxes counter sale,,00,18,4819,NOS,20
+S2-006,invoice,unregistered,DEMO-CUST-203,INV-206,2026-08-14,domestic,DEMO-STATE-02,400.00,0.00,0.00,48.00,4.00,452.00,Packaged drink,,01,12,2202,LTR,40.5
+S2-007,invoice,registered,DEMO-CUST-103,INV-207,2026-08-16,domestic,DEMO-STATE-01,100.00,9.00,9.00,0.00,0.00,118.00,Bad GSTIN,ABC,00,18,4819,NOS,1
+S2-008,invoice,unregistered,DEMO-CUST-204,INV-208,2026-08-18,domestic,DEMO-STATE-01,100.00,9.00,9.00,0.00,0.00,118.00,GSTIN on unregistered,00FFFFF5555F1Z5,00,18,4819,NOS,1

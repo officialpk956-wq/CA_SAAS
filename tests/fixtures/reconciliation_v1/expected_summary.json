@@ -1,0 +1,22 @@
+{
+  "purchase_rows_total": 20,
+  "statement_rows_total": 20,
+  "purchase_rows_valid": 17,
+  "purchase_rows_invalid": 3,
+  "statement_rows_valid": 19,
+  "statement_rows_invalid": 1,
+  "distinct_results_by_status": {
+    "matched": 7,
+    "books_only": 3,
+    "statement_only": 5,
+    "amount_mismatch": 3,
+    "duplicate_candidate": 2,
+    "validation_error": 4,
+    "date_conflict": 1
+  },
+  "matched_pair_count": 7,
+  "duplicate_group_count": 2,
+  "unique_source_rows_accounted_for": 40,
+  "amount_difference_direction": "purchase minus statement",
+  "note": "The results in expected_results.csv represent logical result groups; a single result group (result_id) may span multiple CSV rows if there are multiple field differences."
+}

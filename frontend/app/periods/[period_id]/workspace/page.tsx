@@ -6,12 +6,13 @@ import { useParams, useRouter } from "next/navigation";
 
 import Link from "next/link";
 
-import { api, errorMessage, ImportBatch, Period, ReconciliationRun, SourceRecord } from "@/lib/api";
+import { api, errorMessage, Gstr2bConversion, ImportBatch, Period, ReconciliationRun, SourceRecord } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ColumnMapper } from "@/components/assist";
+import { ClientRequests } from "@/components/client-requests";
 
 
 
@@ -82,6 +83,8 @@ export default function Workspace() {
 
     <h2 className="font-display text-4xl">Period {period?.period_code || "workspace"}</h2>
 
+    <ClientRequests periodId={periodId} />
+
     {error && <p role="alert" className="red-ink">{error} <button onClick={load}>Retry</button></p>}
 
     {!period && !error && <p>Loading period...</p>}
@@ -133,6 +136,8 @@ function ImportCard({periodId, type, batches, reload}: {periodId:string;type:"pu
 
   const [mapperFile, setMapperFile] = useState<File | null>(null);
 
+  const [conversion, setConversion] = useState<Gstr2bConversion | null>(null);
+
   useEffect(()=>{
 
     let active=true;
@@ -161,9 +166,19 @@ function ImportCard({periodId, type, batches, reload}: {periodId:string;type:"pu
 
   }
 
+  async function import2b(file: File) {
+    setBusy(true); setError(""); setConversion(null);
+    try { const r = await api.importGstr2b(periodId, file); setConversion(r.conversion); setSelected(r.batch.id); setOffset(0); setAck(false); setNote(""); await reload(); }
+    catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
+  }
+
   return <Card data-testid={`batch-${type}`} className="min-w-0"><CardHeader><CardTitle>{type==="purchase"?"Purchase Register":"GSTR-2B demo statement"}</CardTitle></CardHeader><CardContent className="space-y-4">
 
     <label className="block">Upload CSV (5 MiB maximum)<input aria-label={`${type} CSV`} className="block w-full border rounded p-2 mt-2" type="file" accept=".csv" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f);e.target.value="";}}/></label>
+
+    {type==="statement" && <label className="block text-sm">…or import a GSTR-2B JSON download (B2B invoices)<input aria-label="GSTR-2B JSON" className="block w-full border rounded p-2 mt-2" type="file" accept=".json,application/json" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void import2b(f);e.target.value="";}}/></label>}
+
+    {conversion && <div data-testid="gstr2b-conversion" className="rounded-lg border border-dashed p-3 text-sm space-y-1"><p><b>{conversion.converted}</b> invoice(s) converted. {conversion.notice}</p>{conversion.skipped.length>0 && <ul className="list-disc pl-5">{conversion.skipped.map(s=><li key={s.invoice}>Not imported: {s.invoice} — {s.reason}</li>)}</ul>}{conversion.itc_unavailable.length>0 && <p>ITC not available per the statement: {conversion.itc_unavailable.map(i=>`${i.record_id} (${i.reason})`).join(", ")} — decide these in the worksheet.</p>}</div>}
 
     {error && <p role="alert" className="red-ink">{error}</p>}
 

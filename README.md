@@ -160,3 +160,16 @@ Supabase holds the database, Render runs the FastAPI backend (`render.yaml`) and
 5. **Optional synthetic demo data**: `python scripts/seed_demo_data.py --api https://<render-app>.onrender.com` (it prompts for the password).
 
 Free-plan behaviour: Render sleeps after 15 idle minutes, so the first request can take about 50 s and may time out once while it wakes. Supabase pauses a free project after a week without activity. Uploaded CSVs are written to Render's temporary disk only while they are parsed; the parsed rows live in the database. The login throttle is in-process, so run one Render instance.
+
+## Set-off and cash payable (Phase 5B)
+Under **Knowledge → Legal rules**, a CA confirms two values with a source: the **credit utilisation order** (one `CREDIT>LIABILITY` step per line, applied top to bottom) and **rounding of cash payable** (multiple and direction). GST Helper ships neither. Until the order is confirmed, the worksheet shows "Set-off not computed". Afterwards, steps 4–5 show cash payable per head, rounding and credit carried forward, and the draft workbook gains a Set-off sheet. Enter last period's closing credit as an **Opening credit balance (user-reported)** adjustment. Confirming or changing these rules makes earlier approvals out of date.
+
+## Monthly cycle and firm features (2026-10-05)
+- **Carry-forward:** worksheet step 3 offers last month's closing credit (from a current approval with computed set-off) as opening credit.
+- **Due dates:** shown on the Board after a CA confirms *Return due dates* under Knowledge.
+- **Firm & team:** owner / reviewer / preparer roles, an optional "separate approver" policy, and period assignment ("Only my work" on the Board).
+- **IMS inbox** (per period): accept, reject or keep pending each supplier invoice. Rejected and pending invoices cannot be claimed.
+- **GSTR-3B view:** on the draft, and as a workbook sheet.
+- **GSTR-2B JSON:** import it on the Imports screen, which shows a conversion report.
+- **GSTR-1:** download sales template v2 (GSTIN, state code, rate, HSN, unit, quantity), then **Export GSTR-1 draft (JSON)**. Not validated against the portal: open it in the GSTN offline tool and have a CA review it.
+- **Client requests** (Imports screen): create expiring upload links (clients upload at `/u/<token>` without logging in; files arrive as previews), or draft a reminder that opens in your own email or WhatsApp. Save client contact details on the client page.

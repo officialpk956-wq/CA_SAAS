@@ -1,0 +1,101 @@
+{
+  "label": "SYNTHETIC reference cases for setoff-v1 (Phase 5B). Hand-computed before the engine was written. The step orders below are TEST CONFIGURATIONS chosen to exercise the arithmetic; they are NOT a statement of GST law. The real order is entered and confirmed by the firm's CA.",
+  "method": "Apply steps in the given order; each step uses min(remaining credit of the credit head, remaining liability of the liability head). Cash = liability left; carry forward = credit left. Rounding (if configured) applies to cash per head only.",
+  "configs": {
+    "A": ["IGST>IGST", "IGST>CGST", "IGST>SGST", "CGST>CGST", "CGST>IGST", "SGST>SGST", "SGST>IGST", "CESS>CESS"],
+    "B": ["IGST>SGST", "IGST>CGST"]
+  },
+  "cases": [
+    {
+      "id": "S1-cross-head-use",
+      "config": "A", "rounding": null,
+      "liability": {"igst": "100.00", "cgst": "50.00", "sgst": "50.00", "cess": "0.00"},
+      "credit": {"igst": "120.00", "cgst": "10.00", "sgst": "0.00", "cess": "0.00"},
+      "expected": {
+        "utilisation": [["igst", "igst", "100.00"], ["igst", "cgst", "20.00"], ["cgst", "cgst", "10.00"]],
+        "cash": {"igst": "0.00", "cgst": "20.00", "sgst": "50.00", "cess": "0.00"},
+        "carry_forward": {"igst": "0.00", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+        "total_cash": "70.00"
+      }
+    },
+    {
+      "id": "S2-excess-credit-carried",
+      "config": "A", "rounding": null,
+      "liability": {"igst": "0.00", "cgst": "30.00", "sgst": "30.00", "cess": "0.00"},
+      "credit": {"igst": "0.00", "cgst": "50.00", "sgst": "10.00", "cess": "0.00"},
+      "expected": {
+        "utilisation": [["cgst", "cgst", "30.00"], ["sgst", "sgst", "10.00"]],
+        "cash": {"igst": "0.00", "cgst": "0.00", "sgst": "20.00", "cess": "0.00"},
+        "carry_forward": {"igst": "0.00", "cgst": "20.00", "sgst": "0.00", "cess": "0.00"},
+        "total_cash": "20.00"
+      }
+    },
+    {
+      "id": "S3-round-half-up-to-rupee",
+      "config": "A", "rounding": {"multiple": "1.00", "direction": "half_up"},
+      "liability": {"igst": "0.00", "cgst": "120.50", "sgst": "120.49", "cess": "0.00"},
+      "credit": {"igst": "0.00", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+      "expected": {
+        "utilisation": [],
+        "cash_before_rounding": {"igst": "0.00", "cgst": "120.50", "sgst": "120.49", "cess": "0.00"},
+        "cash": {"igst": "0.00", "cgst": "121.00", "sgst": "120.00", "cess": "0.00"},
+        "carry_forward": {"igst": "0.00", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+        "total_cash": "241.00",
+        "total_cash_before_rounding": "240.99"
+      }
+    },
+    {
+      "id": "S4-round-up-to-rupee",
+      "config": "A", "rounding": {"multiple": "1.00", "direction": "up"},
+      "liability": {"igst": "120.01", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+      "credit": {"igst": "0.00", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+      "expected": {
+        "utilisation": [],
+        "cash": {"igst": "121.00", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+        "carry_forward": {"igst": "0.00", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+        "total_cash": "121.00"
+      }
+    },
+    {
+      "id": "S5-cess-only-against-cess-in-this-config",
+      "config": "A", "rounding": null,
+      "liability": {"igst": "0.00", "cgst": "0.00", "sgst": "0.00", "cess": "40.00"},
+      "credit": {"igst": "100.00", "cgst": "0.00", "sgst": "0.00", "cess": "25.00"},
+      "expected": {
+        "utilisation": [["cess", "cess", "25.00"]],
+        "cash": {"igst": "0.00", "cgst": "0.00", "sgst": "0.00", "cess": "15.00"},
+        "carry_forward": {"igst": "100.00", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+        "total_cash": "15.00"
+      }
+    },
+    {
+      "id": "S6-order-changes-result",
+      "config": "B", "rounding": null,
+      "liability": {"igst": "0.00", "cgst": "50.00", "sgst": "50.00", "cess": "0.00"},
+      "credit": {"igst": "60.00", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+      "expected": {
+        "utilisation": [["igst", "sgst", "50.00"], ["igst", "cgst", "10.00"]],
+        "cash": {"igst": "0.00", "cgst": "40.00", "sgst": "0.00", "cess": "0.00"},
+        "carry_forward": {"igst": "0.00", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+        "total_cash": "40.00"
+      }
+    },
+    {
+      "id": "S7-negative-credit-not-computed",
+      "config": "A", "rounding": null,
+      "liability": {"igst": "0.00", "cgst": "10.00", "sgst": "0.00", "cess": "0.00"},
+      "credit": {"igst": "0.00", "cgst": "-5.00", "sgst": "0.00", "cess": "0.00"},
+      "expected": {"status": "not_computed", "reason_contains": "CGST"}
+    }
+  ],
+  "integration_case": {
+    "description": "Existing integration flow (calc_v1 integration_case: net IGST 90.00 liability/0.00 credit, CGST 117.50/90.00, SGST 112.50/90.00, cess 0) plus an opening_credit adjustment of IGST 50.00, with config A and rounding 1.00 half_up confirmed as test rules.",
+    "expected": {
+      "utilisation": [["igst", "igst", "50.00"], ["cgst", "cgst", "90.00"], ["sgst", "sgst", "90.00"]],
+      "cash_before_rounding": {"igst": "40.00", "cgst": "27.50", "sgst": "22.50", "cess": "0.00"},
+      "cash": {"igst": "40.00", "cgst": "28.00", "sgst": "23.00", "cess": "0.00"},
+      "carry_forward": {"igst": "0.00", "cgst": "0.00", "sgst": "0.00", "cess": "0.00"},
+      "total_cash": "91.00"
+    }
+  }
+}

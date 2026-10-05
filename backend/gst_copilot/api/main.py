@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from .dependencies import get_db
-from .routers import clients, import_batches, reconciliation, resolutions, exports, categories, sales, worksheet, board, assist, auth
+from .routers import clients, import_batches, reconciliation, resolutions, exports, categories, sales, worksheet, board, assist, auth, firm, ims, requests
 
 app = FastAPI(title="GST Helper API")
 
@@ -18,6 +18,9 @@ app.include_router(worksheet.router)
 app.include_router(board.router)
 app.include_router(assist.router)
 app.include_router(auth.router)
+app.include_router(firm.router)
+app.include_router(ims.router)
+app.include_router(requests.router)
 
 @app.get("/health/live")
 async def live():

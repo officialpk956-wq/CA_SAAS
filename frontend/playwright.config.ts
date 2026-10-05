@@ -4,9 +4,10 @@ import { defineConfig, devices } from '@playwright/test';
 const hosted = process.env.E2E_BASE_URL?.replace(/\/$/, '');
 export default defineConfig({
   testDir: './e2e', fullyParallel: false, workers: 1, retries: 0,
-  timeout: 120_000, expect: { timeout: 15_000 },
+  // Hosted round trips (Vercel -> Render -> Supabase) take ~1 s each, so the long journeys need more time.
+  timeout: hosted ? 300_000 : 120_000, expect: { timeout: 15_000 },
   reporter: [['list'], ['html', { open: 'never' }]],
-  use: { baseURL: hosted || 'http://127.0.0.1:3100', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
+  use: { baseURL: hosted || 'http://127.0.0.1:3100', trace: hosted ? 'off' : 'retain-on-failure'  /* traces record typed values, including the real password */, screenshot: 'only-on-failure' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: hosted ? undefined : [
     { command: 'python scripts/serve_e2e.py', cwd: '..', url: 'http://127.0.0.1:8002/health/ready', reuseExistingServer: false, timeout: 120_000 },

@@ -17,7 +17,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..dependencies import get_db, get_active_organization, get_current_user
+from ..dependencies import APPROVERS, get_db, get_active_organization, get_current_user, require_role
 from .board import board_rows
 from .sales import owned_period
 from .worksheet import _draft_views, _gather, _itc_state, _owned_run, _ids, audit_events, reminder_state
@@ -25,6 +25,7 @@ from ... import assist, rules
 from ...db.models import (Adjustment, AdjustmentVoid, AuditEvent, Client, FilingPeriod, GSTRegistration, ImportRecord, KnowledgeRule, LegalRule, Organization,
                           ReconciliationResult, ReconciliationRun, ResultDifference, RuleAcknowledgement, User)
 from ...services.audit import record as audit
+from ...services.ims import blocking as ims_blocking, ims_state
 from ...services.cache import cached
 from ...validation import parse_decimal
 
@@ -232,6 +233,13 @@ async def itc_suggestions(run_id: UUID, org_id: UUID = Depends(get_active_organi
             if s['decision'] != 'claim': continue
             word = rules.blocked_keyword(purchases[_ids(by_id[s['result_id']].purchase_record_ids)[0]]['description'], legal['blocked_credit_keywords']['keywords'])
             if word: s.update(decision='deferred', reason=f'Description matches the firm’s confirmed blocked-credit word “{word}”; CA to confirm before claiming.')
+    ims = await ims_state(db, run.statement_batch_id)
+    if ims:
+        by_id = {r.result_id: r for r in results}
+        for s in suggestions:
+            if s['decision'] != 'claim': continue
+            why = ims_blocking(ims, _ids(by_id[s['result_id']].statement_record_ids))
+            if why: s.update(decision='not_claimed' if 'rejected' in why else 'deferred', reason=f'{why[0].upper()}{why[1:]}; cannot be claimed this period.')
     counts = defaultdict(int)
     for s in suggestions: counts[s['decision']] += 1
     return {'suggestions': suggestions, 'counts': dict(counts), 'note': 'Suggestions only. Accepting sends them through the normal ITC decision checks.'}
@@ -492,7 +500,7 @@ async def legal_rules(org_id: UUID = Depends(get_active_organization), db: Async
     out = []
     for key, t in rules.LEGAL_TEMPLATES.items():
         versions = [_legal_view(r) for r in rows if r.key == key]
-        out.append({'key': key, 'title': t['title'], 'help': t['help'], 'fields': t['fields'],
+        out.append({'key': key, 'title': t['title'], 'help': t['help'], 'fields': t['fields'], 'options': t.get('options', {}),
                     'active': next((v for v in versions if v['status'] == 'active'), None), 'history': versions})
     return {'rules': out, 'notice': 'Values are entered and confirmed by the firm. GST Helper ships none; a check runs only once its rule is confirmed.'}
 
@@ -505,6 +513,7 @@ class LegalInput(BaseModel):
 
 @router.post('/legal-rules/{key}/confirm')
 async def confirm_legal(key: str, data: LegalInput, org_id: UUID = Depends(get_active_organization), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    require_role(user, *APPROVERS)  # statutory values are confirmed by an owner or reviewer, not a preparer
     if key not in rules.LEGAL_TEMPLATES: raise HTTPException(404, 'Unknown legal rule')
     if not data.checked_against_current_law: raise HTTPException(400, 'Confirm that you checked the value against current law')
     if not data.source_reference.strip(): raise HTTPException(400, 'A source reference is required')
@@ -523,6 +532,7 @@ async def confirm_legal(key: str, data: LegalInput, org_id: UUID = Depends(get_a
 async def retire_legal(key: str, org_id: UUID = Depends(get_active_organization), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     current = (await db.execute(select(LegalRule).where(LegalRule.organization_id == org_id, LegalRule.key == key, LegalRule.status == 'active').with_for_update())).scalars().all()
     if not current: raise HTTPException(404, 'No active rule to retire')
+    require_role(user, *APPROVERS)
     for r in current: r.status = 'retired'
     audit(db, org_id, user.id, 'legal_rule_retired', 'legal_rule', current[0].id, None, rules.LEGAL_TEMPLATES.get(key, {}).get('title', key))
     await db.commit()

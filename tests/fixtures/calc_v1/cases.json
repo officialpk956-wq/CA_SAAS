@@ -1,0 +1,104 @@
+{
+  "label": "SYNTHETIC reference cases for calc-v1 (Phase 5A). Hand-computed before the engine was written; not produced by the engine. Not reviewed by a CA.",
+  "formula": "liability = output_tax + rcm_liability + other_liability; credit = itc_claimed - itc_reversal + other_credit; net = liability - credit. Per head, exact paise, no set-off, no rounding.",
+  "cases": [
+    {
+      "id": "C1-intra-state",
+      "output": [{"ref": "S1", "cgst": "90.00", "sgst": "90.00"}, {"ref": "S2", "cgst": "45.50", "sgst": "45.50"}],
+      "itc": [{"ref": "R1", "cgst": "30.25", "sgst": "30.25"}],
+      "adjustments": [],
+      "expected": {
+        "cgst": {"liability": "135.50", "credit": "30.25", "net": "105.25"},
+        "sgst": {"liability": "135.50", "credit": "30.25", "net": "105.25"},
+        "igst": {"liability": "0.00", "credit": "0.00", "net": "0.00"},
+        "cess": {"liability": "0.00", "credit": "0.00", "net": "0.00"}
+      }
+    },
+    {
+      "id": "C2-inter-state",
+      "output": [{"ref": "S1", "igst": "180.00"}, {"ref": "S2", "igst": "36.00"}],
+      "itc": [{"ref": "R1", "igst": "54.00"}],
+      "adjustments": [],
+      "expected": {
+        "igst": {"liability": "216.00", "credit": "54.00", "net": "162.00"},
+        "cgst": {"liability": "0.00", "credit": "0.00", "net": "0.00"},
+        "sgst": {"liability": "0.00", "credit": "0.00", "net": "0.00"},
+        "cess": {"liability": "0.00", "credit": "0.00", "net": "0.00"}
+      }
+    },
+    {
+      "id": "C3-mixed-heads-with-cess",
+      "output": [{"ref": "S1", "cgst": "9.00", "sgst": "9.00", "cess": "12.00"}, {"ref": "S2", "igst": "18.00"}],
+      "itc": [{"ref": "R1", "igst": "5.00", "cess": "2.50"}, {"ref": "R2", "cgst": "1.00", "sgst": "1.00"}],
+      "adjustments": [],
+      "expected": {
+        "igst": {"liability": "18.00", "credit": "5.00", "net": "13.00"},
+        "cgst": {"liability": "9.00", "credit": "1.00", "net": "8.00"},
+        "sgst": {"liability": "9.00", "credit": "1.00", "net": "8.00"},
+        "cess": {"liability": "12.00", "credit": "2.50", "net": "9.50"}
+      }
+    },
+    {
+      "id": "C4-excess-credit-no-cross-use",
+      "output": [{"ref": "S1", "cgst": "10.00", "sgst": "10.00"}],
+      "itc": [{"ref": "R1", "igst": "50.00"}, {"ref": "R2", "cgst": "25.00", "sgst": "5.00"}],
+      "adjustments": [],
+      "expected": {
+        "igst": {"liability": "0.00", "credit": "50.00", "net": "-50.00"},
+        "cgst": {"liability": "10.00", "credit": "25.00", "net": "-15.00"},
+        "sgst": {"liability": "10.00", "credit": "5.00", "net": "5.00"},
+        "cess": {"liability": "0.00", "credit": "0.00", "net": "0.00"}
+      }
+    },
+    {
+      "id": "C5-adjustments",
+      "output": [{"ref": "S1", "igst": "100.00"}],
+      "itc": [{"ref": "R1", "igst": "40.00"}],
+      "adjustments": [
+        {"ref": "A1", "type": "rcm_liability", "head": "igst", "amount": "18.00"},
+        {"ref": "A2", "type": "itc_reversal", "head": "igst", "amount": "4.00"},
+        {"ref": "A3", "type": "other_credit", "head": "cgst", "amount": "2.00"},
+        {"ref": "A4", "type": "other_liability", "head": "cess", "amount": "1.10"}
+      ],
+      "expected": {
+        "igst": {"liability": "118.00", "credit": "36.00", "net": "82.00"},
+        "cgst": {"liability": "0.00", "credit": "2.00", "net": "-2.00"},
+        "sgst": {"liability": "0.00", "credit": "0.00", "net": "0.00"},
+        "cess": {"liability": "1.10", "credit": "0.00", "net": "1.10"}
+      }
+    },
+    {
+      "id": "C6-no-inputs",
+      "output": [],
+      "itc": [],
+      "adjustments": [],
+      "expected": {
+        "igst": {"liability": "0.00", "credit": "0.00", "net": "0.00"},
+        "cgst": {"liability": "0.00", "credit": "0.00", "net": "0.00"},
+        "sgst": {"liability": "0.00", "credit": "0.00", "net": "0.00"},
+        "cess": {"liability": "0.00", "credit": "0.00", "net": "0.00"}
+      }
+    },
+    {
+      "id": "C7-paise-precision",
+      "output": [{"ref": "S1", "cgst": "0.01", "sgst": "0.01"}, {"ref": "S2", "cgst": "0.01", "sgst": "0.01"}, {"ref": "S3", "cgst": "0.01", "sgst": "0.01"}],
+      "itc": [{"ref": "R1", "cgst": "0.02"}],
+      "adjustments": [],
+      "expected": {
+        "cgst": {"liability": "0.03", "credit": "0.02", "net": "0.01"},
+        "sgst": {"liability": "0.03", "credit": "0.00", "net": "0.03"},
+        "igst": {"liability": "0.00", "credit": "0.00", "net": "0.00"},
+        "cess": {"liability": "0.00", "credit": "0.00", "net": "0.00"}
+      }
+    }
+  ],
+  "integration_case": {
+    "description": "Existing synthetic packs through the API: review all 5 ready rows of sample_data/sales_v1 (CGST 112.50, SGST 112.50, IGST 90.00, cess 0.00); reconcile sample_data/v1 and claim only the matched result for PUR-001 (CGST 90.00, SGST 90.00); mark every other result not_claimed; add rcm_liability CGST 5.00; add and void other_liability IGST 1000.00.",
+    "expected": {
+      "igst": {"liability": "90.00", "credit": "0.00", "net": "90.00"},
+      "cgst": {"liability": "117.50", "credit": "90.00", "net": "27.50"},
+      "sgst": {"liability": "112.50", "credit": "90.00", "net": "22.50"},
+      "cess": {"liability": "0.00", "credit": "0.00", "net": "0.00"}
+    }
+  }
+}

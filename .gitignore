@@ -8,3 +8,7 @@ __pycache__/
 *.zip
 frontend/test-results/
 frontend/playwright-report/
+
+# Uploaded source files (private, may contain client data)
+storage/
+*.pyc

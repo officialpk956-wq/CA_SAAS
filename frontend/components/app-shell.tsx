@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Archive, BookMarked, BookOpenText, Calculator, ChevronLeft, ChevronRight, FolderInput, History, Landmark, LogOut, Menu, Moon, PackageSearch, ReceiptIndianRupee, Sun, Users, X } from "lucide-react";
+import { Archive, BookMarked, BookOpenText, Calculator, ChevronLeft, ChevronRight, FolderInput, History, Landmark, Inbox, LogOut, Menu, Moon, PackageSearch, ReceiptIndianRupee, Sun, UserCog, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authApi, boardApi, BoardRow, Me } from "@/lib/api";
 
@@ -15,13 +15,15 @@ const TITLES: [RegExp, string, string][] = [
   [/^\/clients\//, "Client folder", "Demo registrations and filing periods"],
   [/\/workspace$/, "Imports", "Purchase and statement files, validation and reconciliation runs"],
   [/\/review$/, "Reconciliation", "Trace every finding to its source"],
+  [/\/ims$/, "IMS inbox", "Accept, reject or keep pending each supplier invoice"],
   [/\/categories$/, "Categories", "Confirm suggestions and maintain mappings"],
   [/\/sales$/, "Sales", "Review the period's sales register"],
   [/\/worksheet$/, "Tax Worksheet", "Build, review and explicitly approve"],
   [/^\/history/, "History & Audit", "Every action, figure and approval"],
   [/^\/knowledge/, "Knowledge & rules", "Client quirks, captured once and applied with approval"],
+  [/^\/firm/, "Firm & team", "People, roles and the approval policy"],
 ];
-const SECTIONS = ["worksheet", "review", "sales", "categories", "workspace"];
+const SECTIONS = ["worksheet", "review", "ims", "sales", "categories", "workspace"];
 const PERIOD_KEY = "gsth_period";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -51,7 +53,7 @@ function Account() {
   async function signOut() { try { await authApi.logout(); } finally { window.location.assign("/login"); } }
   if (!me) return null;
   return <div className="flex items-center gap-2">
-    <span className="hidden text-right leading-tight xl:block"><span className="block text-xs font-semibold" data-testid="firm-name">{me.firm}</span><span className="block text-[11px] text-muted-foreground">{me.email}</span></span>
+    <span className="hidden text-right leading-tight xl:block"><span className="block text-xs font-semibold" data-testid="firm-name">{me.firm}</span><span className="block text-[11px] text-muted-foreground">{me.email} · <span data-testid="my-role">{me.role}</span></span></span>
     <button type="button" onClick={signOut} aria-label="Sign out" title="Sign out" className="grid h-9 w-9 place-items-center rounded-md border bg-card hover:bg-muted"><LogOut className="h-4 w-4" /></button>
   </div>;
 }
@@ -86,7 +88,7 @@ function PeriodPicker({ rows, current, path }: { rows: BoardRow[]; current: stri
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
-  if (path === "/login") return <div className="gst-app block">{children}</div>;
+  if (path === "/login" || path.startsWith("/u/")) return <div className="gst-app block">{children}</div>;
   return <SignedInShell path={path}>{children}</SignedInShell>;
 }
 
@@ -101,11 +103,13 @@ function SignedInShell({ path, children }: { path: string; children: React.React
     { href: "/clients", label: "Clients", icon: Users },
     { href: periodHref("worksheet"), label: "Tax Worksheet", icon: Calculator, section: "worksheet" },
     { href: periodHref("review"), label: "Reconciliation", icon: PackageSearch, section: "review" },
+    { href: periodHref("ims"), label: "IMS inbox", icon: Inbox, section: "ims" },
     { href: periodHref("sales"), label: "Sales", icon: ReceiptIndianRupee, section: "sales" },
     { href: periodHref("categories"), label: "Categories", icon: Archive, section: "categories" },
     { href: periodHref("workspace"), label: "Imports", icon: FolderInput, section: "workspace" },
     { href: "/knowledge", label: "Knowledge", icon: BookMarked },
     { href: "/history", label: "History & Audit", icon: History, exact: true },
+    { href: "/firm", label: "Firm & team", icon: UserCog, exact: true },
   ];
   const active = (i: Item) => i.section ? path.startsWith("/periods/") && path.endsWith(`/${i.section}`) : i.exact ? path === i.href : path.startsWith(i.href);
   const ledger = row ? `${MONTH_NAMES[Number(row.period_code.split("-")[1]) - 1]} ledger` : "Ledger";

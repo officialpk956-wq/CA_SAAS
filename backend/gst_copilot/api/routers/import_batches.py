@@ -109,3 +109,33 @@ async def import_rows(import_id: UUID, offset: int = Query(0, ge=0), limit: int 
     from ...services.review_service import record_views
     records = await record_views(db, batch.id)
     return {"total": len(records), "items": records[offset:offset+limit]}
+
+
+@router.post("/periods/{period_id}/imports/gstr2b")
+async def import_gstr2b(period_id: UUID, file: UploadFile = File(...), org_id: UUID = Depends(get_active_organization),
+                        user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Convert a GSTR-2B JSON download (B2B section) into a statement import. The converted rows then go through
+    the normal preview, validation and commit; the original JSON is kept in private storage with its hash."""
+    import hashlib, uuid as _uuid
+    from pathlib import Path
+    from ...gstr2b import convert
+    period = (await db.execute(select(FilingPeriod).join(GSTRegistration).join(Client).where(FilingPeriod.id == period_id, Client.organization_id == org_id))).scalars().first()
+    if not period: raise HTTPException(404, "Period not found")
+    content = await file.read(5 * 1024 * 1024 + 1)
+    if len(content) > 5 * 1024 * 1024: raise HTTPException(413, "File size exceeds 5MiB limit")
+    try: csv_bytes, summary = convert(content, period.period_code)
+    except ValueError as exc: raise HTTPException(400, str(exc))
+    name = (file.filename or "gstr2b.json").replace("\\", "/").split("/")[-1][:150]
+    original = Path(settings.STORAGE_DIR) / org_id.hex / f"{_uuid.uuid4().hex}.gstr2b.json"
+    original.parent.mkdir(parents=True, exist_ok=True); original.write_bytes(content)
+    sup_file = Path(__file__).resolve().parents[4] / "sample_data/v1/suppliers.csv"
+    try:
+        batch = await process_upload(db=db, org_id=org_id, period_id=period_id, source_type="statement", original_filename=f"{name} (converted from GSTR-2B JSON)",
+                                     file_content=csv_bytes, storage_dir=settings.STORAGE_DIR, valid_suppliers=parse_suppliers(sup_file))
+    except ValueError as e:
+        original.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    audit(db, org_id, user.id, 'gstr2b_converted', 'import_batch', batch.id, period_id,
+          f"{summary['converted']} invoice(s) converted, {len(summary['skipped'])} skipped, {len(summary['itc_unavailable'])} with ITC not available; JSON sha256 {hashlib.sha256(content).hexdigest()[:16]}")
+    await db.commit()
+    return {"batch": ImportBatchResponse.model_validate(batch).model_dump(mode="json"), "conversion": summary}

@@ -15,7 +15,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from ..dependencies import get_db, get_active_organization, get_current_user
 from ...db.models import Client, FilingPeriod, GSTRegistration, SalesBatch, SalesRecord, SalesReview, AuditEvent, User
-from ...sales import HEADERS, AMOUNTS, MAX_BYTES, VERSION, parse_sales, summarize
+from ...sales import HEADERS, HEADERS_V2, AMOUNTS, MAX_BYTES, VERSION, contract_version, parse_sales, summarize
 from ...services.export_service import sanitize_value
 
 router = APIRouter(tags=['sales'])
@@ -48,26 +48,30 @@ async def record_views(db, batch_id):
     return [{'id':str(r.id),'row_number':r.row_number,'raw_data':r.raw_data,'validation_status':r.validation_status,'issues':r.issues,'history':history[r.id],'decision':history[r.id][-1]['decision'] if history[r.id] else 'unresolved','previous_review_id':history[r.id][-1]['id'] if history[r.id] else None} for r in records]
 
 @router.get('/sales/template')
-async def template(org_id: UUID = Depends(get_active_organization)):
-    stream = StringIO();csv.writer(stream).writerow(HEADERS)
+async def template(version: Literal['1', '2'] = '1', org_id: UUID = Depends(get_active_organization)):
+    stream = StringIO();csv.writer(stream).writerow(HEADERS_V2 if version == '2' else HEADERS)
     return Response(stream.getvalue(),media_type='text/csv',headers={'Content-Disposition':'attachment; filename="synthetic_sales_template.csv"'})
 
 @router.post('/periods/{period_id}/sales-imports')
 async def upload(period_id: UUID, file: UploadFile = File(...), org_id: UUID = Depends(get_active_organization), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     period = await owned_period(db,period_id,org_id,lock=True)
     content = await file.read(MAX_BYTES + 1)
+    return await store_sales_upload(db, period, org_id, user.id, file.filename, content)
+
+async def store_sales_upload(db, period, org_id, user_id, filename, content: bytes, via: str = ''):
+    """Shared by staff uploads and client upload links. The caller holds the period lock."""
     if len(content) > MAX_BYTES: raise HTTPException(413,'Sales file exceeds 5 MiB')
     digest = hashlib.sha256(content).hexdigest()
     existing = (await db.execute(select(SalesBatch).where(SalesBatch.period_id == period.id,SalesBatch.file_hash == digest))).scalars().first()
     if existing: return batch_view(existing)
     try: records = parse_sales(content,period.period_code)
     except ValueError as exc: raise HTTPException(400,str(exc)) from exc
-    name = (file.filename or 'sales.csv').replace('\\','/').split('/')[-1][:200]
+    name = (filename or 'sales.csv').replace('\\','/').split('/')[-1][:200]
     # Keep exact decoded UTF-8 including BOM; re-encoding reproduces the original hash.
-    batch = SalesBatch(period_id=period.id,user_id=user.id,filename=name,file_hash=digest,original_csv=content.decode('utf-8'),contract_version=VERSION,status='preview')
+    batch = SalesBatch(period_id=period.id,user_id=user_id,filename=name,file_hash=digest,original_csv=content.decode('utf-8'),contract_version=contract_version(content),status='preview')
     db.add(batch);await db.flush()
     db.add_all([SalesRecord(batch_id=batch.id,**record) for record in records])
-    db.add(AuditEvent(organization_id=org_id,user_id=user.id,action='sales_uploaded',resource_type='sales_batch',resource_id=str(batch.id),period_id=period.id,summary=f'{len(records)} sales rows'))
+    db.add(AuditEvent(organization_id=org_id,user_id=user_id,action='sales_uploaded',resource_type='sales_batch',resource_id=str(batch.id),period_id=period.id,summary=f'{len(records)} sales rows{via}'))
     await db.commit();await db.refresh(batch)
     return batch_view(batch)
 
@@ -147,3 +151,27 @@ async def export(batch_id: UUID, org_id: UUID = Depends(get_active_organization)
     sheet('Review History',['row_id','review_id','actor_id','decision','note','created_at'],[[r['id'],h['id'],h['actor_id'],h['decision'],h['note'],h['created_at']] for r in rows for h in r['history']])
     stream=BytesIO();wb.save(stream)
     return Response(stream.getvalue(),media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',headers={'Content-Disposition':f'attachment; filename="Synthetic_Sales_{batch.id}.xlsx"'})
+
+
+@router.get('/sales-imports/{batch_id}/gstr1')
+async def gstr1_draft(batch_id: UUID, org_id: UUID = Depends(get_active_organization), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """GSTR-1 draft JSON from reviewed, ready rows of a committed sales-v2 import. Not validated against the portal."""
+    from ...gstr1 import build
+    from ...sales import GSTIN_SHAPE
+    batch = await owned_batch(db, batch_id, org_id)
+    if batch.status != 'committed': raise HTTPException(400, 'Commit the sales import first')
+    if batch.contract_version != 'sales-v2': raise HTTPException(400, 'GSTR-1 needs the sales v2 template (customer GSTIN, state code, rate, HSN, unit, quantity). Download it from Sales and re-upload.')
+    period = await owned_period(db, batch.period_id, org_id)
+    reg = await db.get(GSTRegistration, period.registration_id)
+    rows = await record_views(db, batch.id)
+    ready = [r['raw_data'] for r in rows if r['decision'] == 'reviewed' and r['validation_status'] == 'ready']
+    if not ready: raise HTTPException(400, 'No reviewed, ready rows to include')
+    doc, warnings = build(ready, reg.gstin, period.period_code)
+    pending = sum(1 for r in rows if r['decision'] == 'unresolved')
+    if pending: warnings.insert(0, f'{pending} row(s) still pending review are not included.')
+    if not GSTIN_SHAPE.fullmatch(reg.gstin): warnings.insert(0, f'Registration reference {reg.gstin} is not a GSTIN; the portal will reject this file.')
+    db.add(AuditEvent(organization_id=org_id, user_id=user.id, action='gstr1_draft_exported', resource_type='sales_batch', resource_id=str(batch.id), period_id=period.id,
+                      summary=f"{len(ready)} row(s): {len(doc['b2b'])} B2B customer(s), {len(doc['b2cs'])} B2CS group(s), {len(doc['hsn']['data'])} HSN line(s)"))
+    await db.commit()
+    return {'document': doc, 'warnings': warnings, 'included_rows': len(ready),
+            'notice': 'Draft built from GSTN\'s published GSTR-1 field names; not validated against the offline tool or portal. Open it in the GSTN offline tool and have a CA review it. Not a filed return.'}

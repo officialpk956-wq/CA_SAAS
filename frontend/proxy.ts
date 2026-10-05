@@ -12,6 +12,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except the login page, the API proxy and static assets.
-  matcher: ["/((?!login|api|_next/static|_next/image|favicon.ico).*)"],
+  // Everything except the login page, client upload links (/u/<token>: the token is the credential and the
+  // API checks it), the API proxy and static assets.
+  matcher: ["/((?!login|u/|api|_next/static|_next/image|favicon.ico).*)"],
 };

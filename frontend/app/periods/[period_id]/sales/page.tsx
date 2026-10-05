@@ -45,6 +45,7 @@ export default function Sales() {
   const [ack, setAck] = useState(false);
   const [commitNote, setCommitNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [gstr1Warnings, setGstr1Warnings] = useState<string[] | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [mapperFile, setMapperFile] = useState<File | null>(null);
@@ -90,6 +91,7 @@ export default function Sales() {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" disabled={busy} onClick={() => perform(async () => download(new Blob([await api.salesTemplate()], { type: "text/csv" }), "synthetic_sales_template.csv"))}><FileDown className="mr-2 h-4 w-4" />Download sales template</Button>
+        <Button variant="outline" disabled={busy} title="Adds customer GSTIN, state code, rate, HSN, unit and quantity — needed for a GSTR-1 draft" onClick={() => perform(async () => download(new Blob([await api.salesTemplate("2")], { type: "text/csv" }), "synthetic_sales_template_v2.csv"))}><FileDown className="mr-2 h-4 w-4" />Template v2 (for GSTR-1)</Button>
         <label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted ${busy ? "pointer-events-none opacity-50" : ""}`}>
           <Upload className="h-4 w-4" />{data ? "Replace file" : "Upload file"}
           <input aria-label="Sales CSV" type="file" accept=".csv" disabled={busy} className="sr-only" onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void uploadFile(file); }} />
@@ -138,6 +140,8 @@ export default function Sales() {
           <div className="receipt-lines">{Object.entries(data.summary.included_totals).map(([k, v]) => <div key={k} className={k === "invoice_total" ? "receipt-total" : ""}><span>{TOTAL_LABEL[k] || k}</span><span data-testid={`sales-total-${k}`} className="font-figures text-right">{v}</span></div>)}</div>
           <p className="mt-4 text-xs">Included <b data-testid="sales-included">{data.summary.included}</b> · excluded {data.summary.excluded} · pending <b data-testid="sales-pending">{data.summary.pending}</b></p>
           <Button className="mt-4 w-full" size="sm" disabled={busy || data.batch.status !== "committed"} onClick={() => perform(async () => download(await api.exportSales(selected), `Synthetic_Sales_${selected}.xlsx`))}><Download className="mr-2 h-4 w-4" />Export sales working paper</Button>
+          {data.batch.contract_version === "sales-v2" && <Button className="mt-2 w-full" size="sm" variant="outline" disabled={busy || data.batch.status !== "committed"} onClick={() => perform(async () => { const r = await api.gstr1Draft(selected); setGstr1Warnings(r.warnings); download(new Blob([JSON.stringify(r.document, null, 2)], { type: "application/json" }), `GSTR1_draft_${r.document.fp}.json`); })}><Download className="mr-2 h-4 w-4" />Export GSTR-1 draft (JSON)</Button>}
+          {gstr1Warnings && <ul data-testid="gstr1-warnings" className="mt-2 list-disc pl-4 text-left text-[11px] text-muted-foreground">{gstr1Warnings.map(w => <li key={w}>{w}</li>)}<li>Draft from GSTN&apos;s published field names; not validated. Open it in the GSTN offline tool and have a CA review it.</li></ul>}
           <p className="mt-4 text-center font-note text-lg">Reviewed totals only</p>
         </aside>
       </div>

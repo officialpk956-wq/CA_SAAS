@@ -6,6 +6,8 @@ export interface Client {
   id: string;
   name: string;
   created_at: string;
+  contact_email?: string | null;
+  contact_phone?: string | null;
 }
 
 export interface Registration {
@@ -119,7 +121,8 @@ export const api = {
   commitSales: (batchId: string, acknowledge_blocked: boolean, note: string) => fetchApi(`/sales-imports/${batchId}/commit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acknowledge_blocked, note }) }),
   reviewSales: (batchId: string, recordId: string, data: { decision: string; note: string; previous_review_id: string | null }) => fetchApi(`/sales-imports/${batchId}/rows/${recordId}/review`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   exportSales: (batchId: string): Promise<Blob> => fetchApi(`/sales-imports/${batchId}/export`),
-  salesTemplate: (): Promise<string> => fetchApi('/sales/template'),
+  salesTemplate: (version: '1' | '2' = '1'): Promise<string> => fetchApi(`/sales/template?version=${version}`),
+  gstr1Draft: (batchId: string): Promise<{ document: { fp: string } & Record<string, unknown>; warnings: string[]; included_rows: number; notice: string }> => fetchApi(`/sales-imports/${batchId}/gstr1`),
   // Clients
   getClients: () => fetchApi('/clients'),
   createClient: (data: { name: string }) => fetchApi('/clients', {
@@ -162,6 +165,7 @@ export const api = {
       body: formData,
     });
   },
+  importGstr2b: (periodId: string, file: File): Promise<{ batch: ImportBatch; conversion: Gstr2bConversion }> => { const form = new FormData(); form.append('file', file); return fetchApi(`/periods/${periodId}/imports/gstr2b`, { method: 'POST', body: form }); },
   getImportRows: (batchId: string, offset = 0): Promise<{ total: number; items: SourceRecord[] }> => fetchApi(`/imports/${batchId}/rows?offset=${offset}&limit=25`),
   getRuns: (periodId: string): Promise<ReconciliationRun[]> => fetchApi(`/periods/${periodId}/reconciliation-runs`),
   getImports: (periodId: string) => fetchApi(`/periods/${periodId}/imports`),
@@ -237,16 +241,19 @@ export const worksheetApi = {
 };
 export interface ItcResult { result_id: string; status: string; reason: string; purchase_record_ids: string[]; itc_at_stake: string | null; statement_record_ids: string[]; decision: string; previous_decision_id: string | null; history: ReviewEvent[] }
 export interface TaxAdjustment { id: string; adjustment_type: string; tax_head: string; amount: string; note: string; actor_id: string; created_at: string; void: { reason: string; actor_id: string; created_at: string } | null }
-export type HeadLine = Record<'output_tax' | 'liability_adjustments' | 'liability' | 'itc_claimed' | 'itc_reversal' | 'other_credit' | 'credit' | 'net', string>;
-export interface WorksheetPayload { worksheet: { engine_version: string; heads: Record<string, HeadLine> } | null; counts: { sales_rows: number; sales_included: number; sales_pending: number; sales_excluded: number; itc: Record<string, number> } }
+export type HeadLine = Record<'output_tax' | 'liability_adjustments' | 'liability' | 'itc_claimed' | 'itc_reversal' | 'other_credit' | 'opening_credit' | 'credit' | 'net', string>;
+export interface SetoffRuleRef { value: Record<string, unknown> & { steps?: string[]; multiple?: string; direction?: string }; source_reference: string; effective_from: string; rule_id: string }
+export interface SetoffResult { version: string; status: 'computed' | 'not_computed'; reason?: string; rounding_note?: string; utilisation?: { credit_head: string; liability_head: string; amount: string }[]; heads?: Record<string, Record<'liability' | 'credit' | 'cash_before_rounding' | 'cash' | 'rounding_difference' | 'carry_forward', string>>; total_cash?: string; total_cash_before_rounding?: string; total_carry_forward?: string; rules?: Partial<Record<'credit_utilisation_order' | 'payment_rounding', SetoffRuleRef>> }
+export interface WorksheetPayload { worksheet: { engine_version: string; heads: Record<string, HeadLine> } | null; setoff?: SetoffResult; gstr3b?: Gstr3bView; counts: { sales_rows: number; sales_included: number; sales_pending: number; sales_excluded: number; itc: Record<string, number> } }
 export interface WorksheetPreview { notice: string; payload: WorksheetPayload; blockers: string[]; fingerprint: string; engine_version: string }
 export interface FilingEvidenceEntry { id: string; arn: string; filed_on: string; note: string; label: string; created_at: string }
-export interface TaxDraft { id: string; state: 'draft' | 'approved' | 'approved_stale' | 'reopened'; sales_batch_id: string; run_id: string; fingerprint: string; blockers: string[]; payload: WorksheetPayload; created_at: string; approval: { id: string; note: string; actor_id: string; created_at: string; reopen: { reason: string; created_at: string } | null; filing_evidence: FilingEvidenceEntry[] } | null }
+export interface TaxDraft { id: string; actor_id?: string; state: 'draft' | 'approved' | 'approved_stale' | 'reopened'; sales_batch_id: string; run_id: string; fingerprint: string; blockers: string[]; payload: WorksheetPayload; created_at: string; approval: { id: string; note: string; actor_id: string; created_at: string; reopen: { reason: string; created_at: string } | null; filing_evidence: FilingEvidenceEntry[] } | null }
 export interface AuditEntry { id: string; action: string; resource_type: string; resource_id: string; summary: string | null; actor: string | null; period_code: string | null; client_name: string | null; created_at: string }
 
 // The Board: per client-period workstream status from persisted records
 export interface BoardCell { tone: 'done' | 'action' | 'blocked' | 'waiting'; label: string; target: 'sales' | 'workspace' | 'worksheet' }
-export interface BoardRow { period_id: string; period_code: string; client_id: string; client_name: string; registration: string; sales: BoardCell; purchases: BoardCell; worksheet: BoardCell }
+export interface DueChip { date: string; days_left: number; tone: BoardCell['tone']; label: string }
+export interface BoardRow { period_id: string; period_code: string; client_id: string; client_name: string; registration: string; sales: BoardCell; purchases: BoardCell; worksheet: BoardCell; due: { gstr1: DueChip; gstr3b: DueChip; source: string } | null; assignee: { id: string; name: string } | null }
 export const boardApi = { get: (): Promise<BoardRow[]> => fetchApi('/board') };
 
 // Assistants: brief, savings, ITC suggestions, investigator, follow-ups, column mapping, ask, knowledge rules
@@ -262,7 +269,7 @@ export interface MappingProposal { template: string; mapping: Record<string, str
 export interface AskAnswer { intent: string | null; answer: string; citations: { label: string; ref: string }[]; suggestions?: string[] }
 export interface KnowledgeRule { id: string; client_id: string | null; client_name: string | null; note: string; rule_kind: 'adjustment' | 'reminder'; frequency: 'monthly' | 'quarterly' | 'one_time'; adjustment_type: string | null; tax_head: string | null; amount: string | null; effective_from: string | null; effective_to: string | null; status: string; created_at: string; missing?: string[]; applied?: boolean; acknowledged?: { note: string; created_at: string } | null }
 export interface RuleConfirmInput { rule_kind: 'adjustment' | 'reminder'; frequency: string; adjustment_type?: string | null; tax_head?: string | null; amount?: string | null; effective_from: string; effective_to?: string | null }
-export interface LegalRuleEntry { key: string; title: string; help: string; fields: Record<string, 'int' | 'decimal' | 'list'>; active: LegalVersion | null; history: LegalVersion[] }
+export interface LegalRuleEntry { key: string; title: string; help: string; fields: Record<string, 'int' | 'decimal' | 'list' | 'steps' | 'choice'>; options?: Record<string, string[]>; active: LegalVersion | null; history: LegalVersion[] }
 export interface LegalVersion { id: string; key: string; value: Record<string, unknown>; source_reference: string; effective_from: string; status: string; confirmed_at: string }
 const form = (data: Record<string, string | Blob>) => { const f = new FormData(); Object.entries(data).forEach(([k, v]) => f.append(k, v)); return f; };
 export const assistApi = {
@@ -291,9 +298,41 @@ export const assistApi = {
 };
 
 // Authentication
-export interface Me { email: string; firm: string | null }
+export type Role = 'owner' | 'reviewer' | 'preparer';
+export interface Me { id: string; email: string; display_name: string; role: Role; firm: string | null; require_separate_approver: boolean }
 export const authApi = {
   login: (email: string, password: string): Promise<Me> => fetchApi('/auth/login', json('POST', { email, password })),
   logout: () => fetchApi('/auth/logout', { method: 'POST' }),
   me: (): Promise<Me> => fetchApi('/auth/me'),
+};
+export interface CarryForward { status: 'available' | 'already_entered' | 'nothing_to_carry' | 'not_available'; from_period: string; reason?: string; draft_id?: string; amounts?: Record<string, string>; existing: TaxAdjustment[] }
+export const carryApi = { get: (periodId: string): Promise<CarryForward> => fetchApi(`/periods/${periodId}/carry-forward`), apply: (periodId: string): Promise<CarryForward> => fetchApi(`/periods/${periodId}/carry-forward`, { method: 'POST' }) };
+export interface FirmUser { id: string; email: string; display_name: string; role: Role; is_active: boolean }
+export interface Firm { name: string; require_separate_approver: boolean; users: FirmUser[] }
+export const firmApi = {
+  get: (): Promise<Firm> => fetchApi('/firm'),
+  settings: (require_separate_approver: boolean): Promise<Firm> => fetchApi('/firm/settings', json('PATCH', { require_separate_approver })),
+  addUser: (data: { email: string; display_name: string; role: Role; initial_password: string }): Promise<FirmUser> => fetchApi('/firm/users', json('POST', data)),
+  changeUser: (id: string, data: Partial<Pick<FirmUser, 'role' | 'is_active' | 'display_name'>>): Promise<FirmUser> => fetchApi(`/firm/users/${id}`, json('PATCH', data)),
+  assign: (periodId: string, user_id: string | null) => fetchApi(`/periods/${periodId}/assign`, json('POST', { user_id })),
+};export interface ImsItem { id: string; record_id: string; supplier_ref: string; invoice_number: string; invoice_date: string; taxable_value: string; tax: string; finding: string | null; action: 'accept' | 'reject' | 'pending' | null; previous_action_id: string | null; history: { id: string; action: string; note: string; actor_id: string; created_at: string }[] }
+export interface ImsInbox { batch_id: string; run_id: string | null; items: ImsItem[]; counts: Record<'accept' | 'reject' | 'pending' | 'no_action', number>; notice: string }
+export const imsApi = {
+  get: (batchId: string): Promise<ImsInbox> => fetchApi(`/imports/${batchId}/ims`),
+  act: (batchId: string, items: { record_id: string; action: string; previous_action_id: string | null }[], note: string) => fetchApi(`/imports/${batchId}/ims`, json('POST', { items, note })),
+};export type G3Row = { label: string; taxable_value: string | null; igst: string | null; cgst: string | null; sgst: string | null; cess: string | null };
+export interface Gstr3bView { version: string; status: 'available' | 'not_available'; reason?: string; table_3_1?: G3Row[]; table_4?: G3Row[]; table_6_1?: { head: string; tax_payable: string; paid_through_itc: Record<string, string>; paid_in_cash: string; interest: null; late_fee: null }[] | null; table_6_1_note?: string | null; notice?: string }export interface Gstr2bConversion { converted: number; skipped: { invoice: string; reason: string }[]; itc_unavailable: { record_id: string; invoice: string; reason: string }[]; notice: string }
+export interface PublicLink { firm: string; client: string; period_code: string; kind: 'sales' | 'purchase'; what: string; expires_at: string; uses_left: number }
+export const publicUploadApi = {
+  get: (token: string): Promise<PublicLink> => fetchApi(`/public/upload/${encodeURIComponent(token)}`),
+  send: (token: string, file: File): Promise<{ status: string; message: string }> => { const form = new FormData(); form.append('file', file); return fetchApi(`/public/upload/${encodeURIComponent(token)}`, { method: 'POST', body: form }); },
+};
+export interface UploadLinkView { id: string; kind: 'sales' | 'purchase'; expires_at: string; uses: number; max_uses: number; state: 'active' | 'expired' | 'used_up' | 'revoked'; created_at: string; path?: string }
+export interface ReminderDraft { missing: string[]; subject: string | null; body: string | null; mailto: string | null; whatsapp: string | null; to_email?: string | null; to_phone?: string | null; note: string }
+export const requestsApi = {
+  links: (periodId: string): Promise<UploadLinkView[]> => fetchApi(`/periods/${periodId}/upload-links`),
+  createLink: (periodId: string, kind: 'sales' | 'purchase', days = 7): Promise<UploadLinkView> => fetchApi(`/periods/${periodId}/upload-links`, json('POST', { kind, days })),
+  revoke: (id: string): Promise<UploadLinkView> => fetchApi(`/upload-links/${id}/revoke`, { method: 'POST' }),
+  reminder: (periodId: string, base_url: string): Promise<ReminderDraft> => fetchApi(`/periods/${periodId}/reminder`, json('POST', { base_url, include_links: true })),
+  setContact: (clientId: string, contact_email: string, contact_phone: string) => fetchApi(`/clients/${clientId}/contact`, json('PATCH', { contact_email, contact_phone })),
 };

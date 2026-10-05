@@ -10,7 +10,7 @@ import { AssistLabel, Hint } from "@/components/assist";
 const TYPES = [["rcm_liability", "Reverse-charge liability"], ["other_liability", "Other liability"], ["itc_reversal", "ITC reversal"], ["other_credit", "Other credit"]];
 const HEADS = ["igst", "cgst", "sgst", "cess"];
 const FREQ: Record<string, string> = { monthly: "Every month", quarterly: "Every quarter", one_time: "One month only" };
-const FIELD_LABEL: Record<string, string> = { day: "Day", month: "Month (1–12)", warn_days: "Warn this many days before", keywords: "Keywords (one per line)", rate_percent: "Rate % per year", due_day: "Due day of following month", per_day: "Per day (₹)", cap: "Maximum (₹)" };
+const FIELD_LABEL: Record<string, string> = { day: "Day", month: "Month (1–12)", warn_days: "Warn this many days before", keywords: "Keywords (one per line)", rate_percent: "Rate % per year", due_day: "Due day of following month", per_day: "Per day (₹)", cap: "Maximum (₹)", steps: "Steps, in order (CREDIT>LIABILITY)", multiple: "Round to a multiple of (₹)", direction: "Direction", gstr1_day: "GSTR-1 due day (next month)", gstr3b_day: "GSTR-3B due day (next month)" };
 
 function describe(r: KnowledgeRule) {
   const when = `${FREQ[r.frequency].toLowerCase()} from ${r.effective_from}${r.effective_to ? ` to ${r.effective_to}` : ""}`;
@@ -47,7 +47,7 @@ function ProposedRule({ rule, onDone }: { rule: KnowledgeRule; onDone: () => Pro
 }
 
 function LegalRuleCard({ entry, onDone }: { entry: LegalRuleEntry; onDone: () => Promise<void> }) {
-  const initial = Object.fromEntries(Object.entries(entry.fields).map(([f, kind]) => { const v = entry.active?.value[f]; return [f, v === undefined ? "" : kind === "list" ? (v as string[]).join("\n") : String(v)]; }));
+  const initial = Object.fromEntries(Object.entries(entry.fields).map(([f, kind]) => { const v = entry.active?.value[f]; return [f, v === undefined ? (kind === "choice" ? entry.options?.[f]?.[0] ?? "" : "") : kind === "list" || kind === "steps" ? (v as string[]).join("\n") : String(v)]; }));
   const [values, setValues] = useState<Record<string, string>>(initial);
   const [source, setSource] = useState(entry.active?.source_reference || "");
   const [from, setFrom] = useState(entry.active?.effective_from || "");
@@ -63,20 +63,20 @@ function LegalRuleCard({ entry, onDone }: { entry: LegalRuleEntry; onDone: () =>
       {entry.active ? <StatusChip tone="done">Confirmed · from {entry.active.effective_from}</StatusChip> : <StatusChip tone="waiting">Not configured — check off</StatusChip>}
     </div>
     {entry.active && !editing && <div className="text-sm space-y-1">
-      <p className="font-figures text-xs">{Object.entries(entry.active.value).map(([k, v]) => `${FIELD_LABEL[k] || k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" · ")}</p>
+      <p className="font-figures text-xs">{Object.entries(entry.active.value).map(([k, v]) => `${FIELD_LABEL[k] || k}: ${Array.isArray(v) ? v.join(entry.fields[k] === "steps" ? " → then " : ", ") : v}`).join(" · ")}</p>
       <p className="text-muted-foreground">Source: {entry.active.source_reference} · confirmed {new Date(entry.active.confirmed_at).toLocaleDateString("en-IN")}{entry.history.length > 1 ? ` · ${entry.history.length - 1} earlier version(s)` : ""}</p>
       <div className="flex gap-2 pt-1"><Button size="sm" variant="outline" onClick={() => setEditing(true)}>New version</Button><Button size="sm" variant="outline" disabled={busy} onClick={() => act(() => assistApi.retireLegal(entry.key))}>Retire</Button></div>
     </div>}
     {editing && <div className="space-y-3">
       <div className="grid gap-3 md:grid-cols-3">{Object.entries(entry.fields).map(([f, kind]) => <label key={f} className="space-y-1 text-sm"><Eyebrow>{FIELD_LABEL[f] || f}</Eyebrow>
-        {kind === "list" ? <Textarea aria-label={`${entry.title} ${f}`} value={values[f]} onChange={e => setValues({ ...values, [f]: e.target.value })} /> : <Input aria-label={`${entry.title} ${f}`} className="font-figures" inputMode="decimal" value={values[f]} onChange={e => setValues({ ...values, [f]: e.target.value })} />}</label>)}</div>
+        {kind === "choice" ? <select aria-label={`${entry.title} ${f}`} className="native-field" value={values[f]} onChange={e => setValues({ ...values, [f]: e.target.value })}>{(entry.options?.[f] || []).map(o => <option key={o} value={o}>{o.replaceAll("_", " ")}</option>)}</select> : kind === "list" || kind === "steps" ? <Textarea aria-label={`${entry.title} ${f}`} className={kind === "steps" ? "font-figures" : undefined} placeholder={kind === "steps" ? "One step per line, e.g. IGST>IGST" : undefined} value={values[f]} onChange={e => setValues({ ...values, [f]: e.target.value })} /> : <Input aria-label={`${entry.title} ${f}`} className="font-figures" inputMode="decimal" value={values[f]} onChange={e => setValues({ ...values, [f]: e.target.value })} />}</label>)}</div>
       <div className="grid gap-3 md:grid-cols-[1fr_180px]">
         <label className="space-y-1 text-sm"><Eyebrow>Source reference (section, notification or circular)</Eyebrow><Input aria-label={`${entry.title} source`} value={source} onChange={e => setSource(e.target.value)} /></label>
         <label className="space-y-1 text-sm"><Eyebrow>Applies from</Eyebrow><Input aria-label={`${entry.title} applies from`} type="month" value={from} onChange={e => setFrom(e.target.value)} /></label>
       </div>
       <label className="flex items-start gap-2 text-sm"><input type="checkbox" aria-label={`${entry.title} checked`} checked={checked} onChange={e => setChecked(e.target.checked)} />I have checked these values against current law and the source above.</label>
       {error && <p className="red-ink text-sm">{error}</p>}
-      <div className="flex gap-2"><Button disabled={busy || !filled} onClick={() => act(() => assistApi.confirmLegal(entry.key, Object.fromEntries(Object.entries(values).map(([k, v]) => [k, entry.fields[k] === "list" ? v.split("\n") : v])), source, from))}>Confirm {entry.active ? "new version" : "rule"}</Button>
+      <div className="flex gap-2"><Button disabled={busy || !filled} onClick={() => act(() => assistApi.confirmLegal(entry.key, Object.fromEntries(Object.entries(values).map(([k, v]) => [k, entry.fields[k] === "list" || entry.fields[k] === "steps" ? v.split("\n") : v])), source, from))}>Confirm {entry.active ? "new version" : "rule"}</Button>
         {entry.active && <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>}</div>
     </div>}
   </article>;

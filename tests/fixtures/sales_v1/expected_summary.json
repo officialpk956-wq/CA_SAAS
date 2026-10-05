@@ -1,0 +1,15 @@
+{
+  "source_rows": 19,
+  "ready": 5,
+  "duplicate": 4,
+  "invalid": 8,
+  "unsupported": 2,
+  "reviewed_totals": {
+    "taxable_value": "1750.00",
+    "cgst": "112.50",
+    "sgst": "112.50",
+    "igst": "90.00",
+    "cess": "0.00",
+    "invoice_total": "2065.00"
+  }
+}

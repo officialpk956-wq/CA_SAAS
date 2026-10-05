@@ -22,5 +22,13 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
         if row: return row
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Please log in.")
 
+ROLES = ('owner', 'reviewer', 'preparer')
+APPROVERS = ('owner', 'reviewer')
+
+def require_role(user: User, *roles: str):
+    """403 unless the user's firm role is one of `roles`."""
+    if user.role not in roles:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f"Your role ({user.role}) can't do this. Ask a{'n' if roles[0][0] in 'aeiou' else ''} {' or '.join(roles)}.")
+
 async def get_active_organization(current_user: User = Depends(get_current_user)) -> uuid.UUID:
     return current_user.organization_id

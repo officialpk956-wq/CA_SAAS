@@ -1,0 +1,24 @@
+{
+  "label": "SYNTHETIC hand-computed GSTR-1 draft for sample_data/sales_v2/sales_register.csv with all ready rows reviewed (S2-001..S2-006). Written before the builder. GSTINs use state code 00, which does not exist.",
+  "gstin": "00AAAAA0000A1Z0",
+  "fp": "082026",
+  "b2b": [
+    {"ctin": "00DDDDD3333D1Z3", "inv": [
+      {"inum": "INV-201", "idt": "02-08-2026", "val": 1180.0, "pos": "00", "rchrg": "N", "inv_typ": "R", "itms": [{"num": 1, "itm_det": {"txval": 1000.0, "rt": 18.0, "iamt": 0.0, "camt": 90.0, "samt": 90.0, "csamt": 0.0}}]},
+      {"inum": "INV-202", "idt": "05-08-2026", "val": 560.0, "pos": "00", "rchrg": "N", "inv_typ": "R", "itms": [{"num": 1, "itm_det": {"txval": 500.0, "rt": 12.0, "iamt": 0.0, "camt": 30.0, "samt": 30.0, "csamt": 0.0}}]}
+    ]},
+    {"ctin": "00EEEEE4444E1Z4", "inv": [
+      {"inum": "INV-203", "idt": "07-08-2026", "val": 2360.0, "pos": "01", "rchrg": "N", "inv_typ": "R", "itms": [{"num": 1, "itm_det": {"txval": 2000.0, "rt": 18.0, "iamt": 360.0, "camt": 0.0, "samt": 0.0, "csamt": 0.0}}]}
+    ]}
+  ],
+  "b2cs": [
+    {"sply_ty": "INTER", "pos": "01", "typ": "OE", "rt": 12.0, "txval": 400.0, "iamt": 48.0, "camt": 0.0, "samt": 0.0, "csamt": 4.0},
+    {"sply_ty": "INTRA", "pos": "00", "typ": "OE", "rt": 18.0, "txval": 500.0, "iamt": 0.0, "camt": 45.0, "samt": 45.0, "csamt": 0.0}
+  ],
+  "hsn": {"data": [
+    {"num": 1, "hsn_sc": "2202", "desc": "", "uqc": "LTR", "qty": 40.5, "rt": 12.0, "txval": 400.0, "iamt": 48.0, "camt": 0.0, "samt": 0.0, "csamt": 4.0},
+    {"num": 2, "hsn_sc": "4819", "desc": "", "uqc": "NOS", "qty": 50.0, "rt": 12.0, "txval": 500.0, "iamt": 0.0, "camt": 30.0, "samt": 30.0, "csamt": 0.0},
+    {"num": 3, "hsn_sc": "4819", "desc": "", "uqc": "NOS", "qty": 150.0, "rt": 18.0, "txval": 1500.0, "iamt": 0.0, "camt": 135.0, "samt": 135.0, "csamt": 0.0},
+    {"num": 4, "hsn_sc": "8471", "desc": "", "uqc": "NOS", "qty": 2.0, "rt": 18.0, "txval": 2000.0, "iamt": 360.0, "camt": 0.0, "samt": 0.0, "csamt": 0.0}
+  ]}
+}

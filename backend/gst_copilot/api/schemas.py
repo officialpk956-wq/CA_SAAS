@@ -11,6 +11,8 @@ class ClientResponse(BaseModel):
     id: UUID
     name: str
     created_at: datetime
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 

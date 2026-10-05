@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CircleDot } from "lucide-react";
-import { boardApi, errorMessage, BoardCell, BoardRow } from "@/lib/api";
+import { authApi, boardApi, errorMessage, BoardCell, BoardRow, Me } from "@/lib/api";
 import { Eyebrow } from "@/components/status-chip";
 import { MorningBrief } from "@/components/assist";
 import { cn } from "@/lib/utils";
 
+const DUE_TONE: Record<BoardCell["tone"], string> = { done: "text-[var(--tile-done)]", action: "text-[var(--tile-needs)]", blocked: "text-[var(--tile-blocked)] font-semibold", waiting: "text-board-muted" };
 const STREAMS = [["sales", "Sales"], ["purchases", "Purchases & ITC"], ["worksheet", "Tax worksheet"]] as const;
 const FLIP: Record<BoardCell["tone"], string> = { done: "flip-done", action: "flip-needs", blocked: "flip-blocked", waiting: "" };
 const href = (row: BoardRow, cell: BoardCell) => `/periods/${row.period_id}/${cell.target}`;
@@ -29,19 +30,24 @@ export default function Board() {
   const [rows, setRows] = useState<BoardRow[] | null>(null);
   const [error, setError] = useState("");
   const [now, setNow] = useState("");
+  const [me, setMe] = useState<Me | null>(null);
+  const [mine, setMine] = useState(false);
   useEffect(() => {
     let active = true;
     boardApi.get().then(r => { if (active) { setRows(r); setNow(new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).toUpperCase()); } }).catch(e => { if (active) setError(errorMessage(e)); });
+    authApi.me().then(m => { if (active) setMe(m); }).catch(() => {});
     return () => { active = false; };
   }, []);
 
-  const needs = (rows || []).flatMap(row => STREAMS.map(([key, label]) => ({ row, label, cell: row[key] }))).filter(x => x.cell.tone === "action" || x.cell.tone === "blocked");
+  // "My work": periods assigned to the signed-in person.
+  const shown = rows && mine && me ? rows.filter(r => r.assignee?.id === me.id) : rows;
+  const needs = (shown || []).flatMap(row => STREAMS.map(([key, label]) => ({ row, label, cell: row[key] }))).filter(x => x.cell.tone === "action" || x.cell.tone === "blocked");
   const blocked = needs.filter(n => n.cell.tone === "blocked");
 
   return <div className="console-content w-full space-y-6">
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div><Eyebrow className="text-primary">Departures</Eyebrow><h2 className="mt-1 font-display text-4xl font-semibold md:text-6xl">Everything due, at a glance.</h2></div>
-      <Link href="/clients" className="font-label text-xs font-bold uppercase tracking-widest underline underline-offset-4">Manage clients</Link>
+      <div className="flex items-center gap-4"><label className="flex items-center gap-2 text-sm"><input type="checkbox" aria-label="Only my work" checked={mine} onChange={e => setMine(e.target.checked)} />Only my work</label><Link href="/clients" className="font-label text-xs font-bold uppercase tracking-widest underline underline-offset-4">Manage clients</Link></div>
     </div>
     {error && <p role="alert" className="red-ink">{error}</p>}
     {!rows && !error && <p className="text-sm text-muted-foreground">Loading the board…</p>}
@@ -54,6 +60,7 @@ export default function Board() {
       <Link href="/clients" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary">Go to clients <ArrowRight className="h-4 w-4" /></Link>
     </div>}
 
+    {rows && rows.length > 0 && mine && shown!.length === 0 && <p className="paper-card text-sm text-muted-foreground">Nothing is assigned to you. Assign periods from the Tax Worksheet screen.</p>}
     {rows && rows.length > 0 && <>
       <section aria-labelledby="needs-heading">
         <div className="mb-3 flex items-center gap-2"><CircleDot className="size-4 text-status-needs" /><Eyebrow><span id="needs-heading">Boarding now — needs you</span></Eyebrow></div>
@@ -76,13 +83,16 @@ export default function Board() {
         </div>
         <div className="board-scroll"><div className="min-w-[980px]">
           <div className="board-grid board-head"><span>Client</span><span>Period</span>{STREAMS.map(([, label]) => <span key={label}>{label}</span>)}<span>Remarks</span></div>
-          {rows.map((row, index) => {
+          {shown!.map((row, index) => {
             const r = remark(row);
             return <div className="board-grid board-row" data-testid="board-row" key={row.period_id}>
-              <Link href={`/clients/${row.client_id}`} className="board-client hover:underline"><b>{row.client_name}</b><small>{row.registration}</small></Link>
+              <Link href={`/clients/${row.client_id}`} className="board-client hover:underline"><b>{row.client_name}</b><small>{row.registration}{row.assignee ? ` · ${row.assignee.name}` : ""}</small></Link>
               <FlipTile tone="waiting" delay={index * 45}>{row.period_code}</FlipTile>
               {STREAMS.map(([key], i) => <Link key={key} href={href(row, row[key])} aria-label={`${row.client_name} ${key}: ${row[key].label}`}><FlipTile tone={row[key].tone} delay={index * 45 + (i + 1) * 25}>{row[key].label}</FlipTile></Link>)}
               <FlipTile tone={r.tone} delay={index * 45 + 100}>{r.text}</FlipTile>
+              {row.due && <p data-testid="board-due" className="col-span-full -mt-1 flex flex-wrap gap-x-5 px-1.5 pb-1 font-figures text-[0.68rem]" title={`Due days confirmed by your CA · source: ${row.due.source}`}>
+                {(["gstr1", "gstr3b"] as const).map(k => <span key={k} className={DUE_TONE[row.due![k].tone]}>{k === "gstr1" ? "GSTR-1" : "GSTR-3B"} · {row.due![k].label}</span>)}
+              </p>}
             </div>;
           })}
         </div></div>

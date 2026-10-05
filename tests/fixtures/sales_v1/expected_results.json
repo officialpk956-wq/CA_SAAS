@@ -1,0 +1,125 @@
+[
+  {
+    "row_number": 2,
+    "status": "ready",
+    "issues": []
+  },
+  {
+    "row_number": 3,
+    "status": "ready",
+    "issues": []
+  },
+  {
+    "row_number": 4,
+    "status": "ready",
+    "issues": []
+  },
+  {
+    "row_number": 5,
+    "status": "ready",
+    "issues": []
+  },
+  {
+    "row_number": 6,
+    "status": "duplicate",
+    "issues": [
+      "duplicate_invoice"
+    ]
+  },
+  {
+    "row_number": 7,
+    "status": "duplicate",
+    "issues": [
+      "duplicate_invoice"
+    ]
+  },
+  {
+    "row_number": 8,
+    "status": "invalid",
+    "issues": [
+      "invalid_date"
+    ]
+  },
+  {
+    "row_number": 9,
+    "status": "invalid",
+    "issues": [
+      "wrong_period"
+    ]
+  },
+  {
+    "row_number": 10,
+    "status": "invalid",
+    "issues": [
+      "invalid_taxable_value"
+    ]
+  },
+  {
+    "row_number": 11,
+    "status": "invalid",
+    "issues": [
+      "invalid_taxable_value"
+    ]
+  },
+  {
+    "row_number": 12,
+    "status": "invalid",
+    "issues": [
+      "invalid_taxable_value"
+    ]
+  },
+  {
+    "row_number": 13,
+    "status": "invalid",
+    "issues": [
+      "total_mismatch"
+    ]
+  },
+  {
+    "row_number": 14,
+    "status": "invalid",
+    "issues": [
+      "invalid_customer_ref"
+    ]
+  },
+  {
+    "row_number": 15,
+    "status": "unsupported",
+    "issues": [
+      "unsupported_document"
+    ]
+  },
+  {
+    "row_number": 16,
+    "status": "unsupported",
+    "issues": [
+      "unsupported_scope"
+    ]
+  },
+  {
+    "row_number": 17,
+    "status": "duplicate",
+    "issues": [
+      "duplicate_record_id"
+    ]
+  },
+  {
+    "row_number": 18,
+    "status": "duplicate",
+    "issues": [
+      "duplicate_record_id"
+    ]
+  },
+  {
+    "row_number": 19,
+    "status": "invalid",
+    "issues": [
+      "missing_place_of_supply"
+    ]
+  },
+  {
+    "row_number": 20,
+    "status": "ready",
+    "issues": []
+  }
+]

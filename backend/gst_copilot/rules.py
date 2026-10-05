@@ -28,8 +28,34 @@ LEGAL_TEMPLATES = {
         'help': 'Late fee per day, the maximum, and the day of the following month by which the return is due.',
         'fields': {'per_day': 'decimal', 'cap': 'decimal', 'due_day': 'int'},
     },
+    'return_due_dates': {
+        'title': 'Return due dates',
+        'help': 'Day of the month after the period by which each return is due, for monthly filers. Shown on the Board once confirmed.',
+        'fields': {'gstr1_day': 'int', 'gstr3b_day': 'int'},
+    },
+    'credit_utilisation_order': {
+        'title': 'Credit utilisation order (set-off)',
+        'help': 'The order in which credit is used against liability, one step per line as CREDIT>LIABILITY (e.g. IGST>IGST). '
+                'Steps run top to bottom; a pair that is not listed is never used. Until this is confirmed, set-off and cash payable are not computed.',
+        'fields': {'steps': 'steps'},
+    },
+    'payment_rounding': {
+        'title': 'Rounding of cash payable',
+        'help': 'Round each head’s cash payable to a multiple of this amount (1.00 = whole rupees; 0.01 = no rounding), in this direction.',
+        'fields': {'multiple': 'decimal', 'direction': 'choice'},
+        'options': {'direction': ['half_up', 'up', 'down']},
+    },
 }
-LIMITS = {'day': (1, 31), 'month': (1, 12), 'warn_days': (0, 730), 'due_day': (1, 31)}
+LIMITS = {'day': (1, 31), 'month': (1, 12), 'warn_days': (0, 730), 'due_day': (1, 31), 'gstr1_day': (1, 31), 'gstr3b_day': (1, 31)}
+
+def due_status(due: date, today: date, done: bool, done_word: str = 'done') -> dict:
+    """Board chip for a return deadline: done once handled; otherwise by days left."""
+    days = (due - today).days
+    if done: tone, label = 'done', f'Due {due.strftime("%d %b")} · {done_word}'
+    elif days < 0: tone, label = 'blocked', f'Overdue by {-days} day(s) ({due.strftime("%d %b")})'
+    elif days <= 3: tone, label = 'action', f'Due {due.strftime("%d %b")} · {days} day(s) left'
+    else: tone, label = 'waiting', f'Due {due.strftime("%d %b")} · {days} days left'
+    return {'date': due.isoformat(), 'days_left': days, 'tone': tone, 'label': label}
 CENT = Decimal('0.01')
 
 def validate_legal_value(key, value):
@@ -54,6 +80,14 @@ def validate_legal_value(key, value):
             except InvalidOperation: raise ValueError(f'{name} must be a number')
             if not d.is_finite() or d < 0 or d > Decimal('1000000'): raise ValueError(f'{name} must be between 0 and 1,000,000')
             out[name] = format(d.quantize(CENT, ROUND_HALF_UP), '.2f')
+        elif kind == 'steps':
+            from .setoff import parse_steps
+            items = raw if isinstance(raw, list) else str(raw).splitlines()
+            out[name] = [f'{c.upper()}>{l.upper()}' for c, l in parse_steps(items)]
+        elif kind == 'choice':
+            options = LEGAL_TEMPLATES[key]['options'][name]
+            if raw not in options: raise ValueError(f'{name} must be one of: {", ".join(options)}')
+            out[name] = raw
         else:
             items = raw if isinstance(raw, list) else str(raw).splitlines()
             words = sorted({w.strip().lower() for w in items if w.strip()})
@@ -63,6 +97,8 @@ def validate_legal_value(key, value):
     if key == 'itc_claim_deadline':
         try: date(2001, out['month'], out['day'])  # non-leap year: rejects 31 Apr, 30 Feb, 29 Feb
         except ValueError: raise ValueError('That day does not exist in that month')
+    if key == 'payment_rounding' and Decimal(out['multiple']) <= 0:
+        raise ValueError('multiple must be greater than 0 (use 0.01 for no rounding)')
     return out
 
 def fy_end(d: date) -> date:

@@ -1,4 +1,7 @@
-"""Synthetic sales contract v1: source checks and Decimal totals, no tax inference."""
+"""Synthetic sales contracts v1 and v2: source checks and Decimal totals, no tax inference.
+
+v2 adds the fields a GSTR-1 draft needs, all SUPPLIED by the user, never inferred: customer GSTIN (registered
+customers only, GSTIN-shaped), place-of-supply state code, rate, HSN code, unit (UQC) and quantity."""
 import csv
 import io
 import re
@@ -11,6 +14,13 @@ VERSION = 'sales-v1'
 AMOUNTS = ('taxable_value','cgst','sgst','igst','cess','invoice_total')
 HEADERS = 'record_id document_type customer_type customer_ref invoice_number invoice_date supply_scope place_of_supply taxable_value cgst sgst igst cess invoice_total description'.split()
 MAX_BYTES = 5 * 1024 * 1024
+V2_EXTRA = 'customer_gstin pos_state_code rate hsn_code uqc quantity'.split()
+HEADERS_V2 = HEADERS + V2_EXTRA
+GSTIN_SHAPE = re.compile(r'\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]')
+
+def contract_version(content: bytes) -> str:
+    first = content.decode('utf-8-sig', errors='replace').splitlines()[0] if content else ''
+    return 'sales-v2' if set(next(csv.reader([first]), [])) == set(HEADERS_V2) else VERSION
 
 def parse_sales(content: bytes, period: str) -> list[dict]:
     if len(content) > MAX_BYTES: raise ValueError('Sales file exceeds 5 MiB')
@@ -24,7 +34,8 @@ def parse_sales(content: bytes, period: str) -> list[dict]:
     try:
         headers = next(reader, [])
         if len(headers) != len(set(headers)): raise ValueError('Duplicate sales headers')
-        if set(headers) != set(HEADERS): raise ValueError('Sales headers must exactly match the documented template')
+        if set(headers) not in (set(HEADERS), set(HEADERS_V2)): raise ValueError('Sales headers must exactly match the documented v1 or v2 template')
+        v2 = set(headers) == set(HEADERS_V2)
         rows = []
         for number, values in enumerate(reader,2):
             if not values or not any(v.strip() for v in values): continue
@@ -58,6 +69,15 @@ def parse_sales(content: bytes, period: str) -> list[dict]:
             except ValueError: issues.append('invalid_'+key)
         if len(amounts) == len(AMOUNTS) and amounts['invoice_total'] != sum((amounts[k] for k in AMOUNTS[:-1]), Decimal('0.00')):
             issues.append('total_mismatch')
+        if v2:
+            gstin = d['customer_gstin'].strip()
+            if d['customer_type'] == 'registered' and not GSTIN_SHAPE.fullmatch(gstin): issues.append('invalid_customer_gstin')
+            if d['customer_type'] == 'unregistered' and gstin: issues.append('gstin_on_unregistered')
+            if not re.fullmatch(r'\d{2}', d['pos_state_code']): issues.append('invalid_pos_state_code')
+            if not re.fullmatch(r'\d{1,2}(\.\d{1,2})?', d['rate']) or Decimal(d['rate']) > 100: issues.append('invalid_rate')
+            if not re.fullmatch(r'\d{4,8}', d['hsn_code']): issues.append('invalid_hsn_code')
+            if not re.fullmatch(r'[A-Z]{3}', d['uqc']): issues.append('invalid_uqc')
+            if not re.fullmatch(r'\d{1,12}(\.\d{1,3})?', d['quantity']): issues.append('invalid_quantity')
         if d['record_id'].strip() and ids[d['record_id'].strip()] > 1: issues.append('duplicate_record_id')
         if d['invoice_number'].strip() and identities[(d['document_type'].strip(),d['invoice_number'].strip())] > 1: issues.append('duplicate_invoice')
         row['issues'] = issues

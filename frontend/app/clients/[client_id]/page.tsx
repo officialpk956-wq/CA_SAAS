@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { errorMessage, api, Registration, Period, Client } from "@/lib/api";
+import { errorMessage, api, requestsApi, Registration, Period, Client } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -102,6 +102,7 @@ export default function ClientWorkspace() {
       </div>
 
       {error && <p role="alert" className="red-ink">{error}</p>}
+      <ContactCard client={client} />
       <div className="grid md:grid-cols-[1fr_350px] gap-6">
         <div className="space-y-6">
           {registrations.length === 0 ? (
@@ -209,4 +210,20 @@ export default function ClientWorkspace() {
       </div>
     </div>
   );
+}
+
+function ContactCard({ client }: { client: Client }) {
+  const [email, setEmail] = useState(client.contact_email || "");
+  const [phone, setPhone] = useState(client.contact_phone || "");
+  const [state, setState] = useState("");
+  async function save() { setState(""); try { await requestsApi.setContact(client.id, email.trim(), phone.trim()); setState("Saved."); } catch (e) { setState(errorMessage(e)); } }
+  return <div className="paper-card space-y-2" data-testid="client-contact">
+    <p className="font-label text-[0.68rem] font-bold uppercase tracking-[0.16em] text-primary">Contact for reminders</p>
+    <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+      <Input aria-label="Client email" type="email" placeholder="name@client.example" value={email} onChange={e => setEmail(e.target.value)} />
+      <Input aria-label="Client WhatsApp number" placeholder="+91 98765 43210" value={phone} onChange={e => setPhone(e.target.value)} />
+      <Button variant="outline" onClick={save}>Save contact</Button>
+    </div>
+    {state && <p className="text-xs text-muted-foreground">{state}</p>}
+  </div>;
 }

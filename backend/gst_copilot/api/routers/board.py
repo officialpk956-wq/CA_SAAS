@@ -1,4 +1,5 @@
 """The Board: per client-period status of each workstream, derived only from persisted workflow records."""
+from datetime import date
 from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -6,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..dependencies import get_db, get_active_organization
 from .sales import record_views as sales_record_views
 from .worksheet import _draft_views, _itc_state
-from ...db.models import Client, FilingPeriod, GSTRegistration, ImportBatch, ReconciliationRun, SalesBatch
+from ...db.models import Client, FilingPeriod, GSTRegistration, ImportBatch, LegalRule, ReconciliationRun, SalesBatch, User
+from ...rules import due_date, due_status
 from ...services.cache import cached
 
 router = APIRouter(tags=['board'])
@@ -52,16 +54,27 @@ async def _worksheet_cell(db, period, org_id):
 
 @router.get('/board')
 async def board(org_id: UUID = Depends(get_active_organization), db: AsyncSession = Depends(get_db)):
-    return await cached(db, org_id, 'board', lambda: board_rows(db, org_id))
+    today = date.today()
+    # Day-specific key: days-left on due dates must refresh daily even when no record changed.
+    return await cached(db, org_id, 'board', lambda: board_rows(db, org_id, today), today.isoformat())
 
-async def board_rows(db, org_id):
+async def board_rows(db, org_id, today: date | None = None):
+    today = today or date.today()
+    people = {u.id: {'id': str(u.id), 'name': u.display_name or u.email.split('@')[0]} for u in (await db.execute(select(User).where(User.organization_id == org_id))).scalars().all()}
+    due_rule = (await db.execute(select(LegalRule).where(LegalRule.organization_id == org_id, LegalRule.key == 'return_due_dates', LegalRule.status == 'active'))).scalars().first()
     rows =(await db.execute(select(FilingPeriod, GSTRegistration, Client).join(GSTRegistration, FilingPeriod.registration_id == GSTRegistration.id)
                              .join(Client, GSTRegistration.client_id == Client.id).where(Client.organization_id == org_id)
                              .order_by(FilingPeriod.period_code.desc(), Client.name))).all()
     # ponytail: computes every period on each request; add caching or a period filter when rosters grow past a few hundred periods.
     items = []
     for period, reg, client in rows:
+        sales, worksheet = await _sales_cell(db, period.id), await _worksheet_cell(db, period, org_id)
+        due = None  # Only from a CA-confirmed rule in force for this period; none is shipped.
+        if due_rule and due_rule.effective_from <= period.period_code:
+            v = due_rule.value
+            due = {'gstr1': due_status(due_date(period.period_code, v['gstr1_day']), today, sales['tone'] == 'done', 'sales prepared'),
+                   'gstr3b': due_status(due_date(period.period_code, v['gstr3b_day']), today, worksheet['label'] == 'Filed (user-reported)', 'filed (user-reported)'),
+                   'source': due_rule.source_reference}
         items.append({'period_id': str(period.id), 'period_code': period.period_code, 'client_id': str(client.id), 'client_name': client.name,
-                      'registration': reg.gstin, 'sales': await _sales_cell(db, period.id), 'purchases': await _purchase_cell(db, period.id),
-                      'worksheet': await _worksheet_cell(db, period, org_id)})
+                      'registration': reg.gstin, 'sales': sales, 'purchases': await _purchase_cell(db, period.id), 'worksheet': worksheet, 'due': due, 'assignee': people.get(period.assignee_id)})
     return items

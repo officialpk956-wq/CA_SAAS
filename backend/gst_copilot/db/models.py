@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
-from sqlalchemy import String, ForeignKey, DateTime, Numeric, Text, Boolean, Integer, JSON, UniqueConstraint, true
+from sqlalchemy import String, ForeignKey, DateTime, Numeric, Text, Boolean, Integer, JSON, UniqueConstraint, false, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from .database import Base
@@ -14,6 +14,8 @@ class Organization(Base):
     __tablename__ = "organizations"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    # When on, a draft cannot be approved by the person who created it.
+    require_separate_approver: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     
 class User(Base):
@@ -23,6 +25,8 @@ class User(Base):
     organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # null = cannot log in
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=true())
+    role: Mapped[str] = mapped_column(String, nullable=False, default="owner", server_default="owner")  # owner, reviewer, preparer
+    display_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     
 class Client(Base):
@@ -30,6 +34,8 @@ class Client(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    contact_email: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # for reminder drafts only
+    contact_phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 class GSTRegistration(Base):
@@ -45,6 +51,7 @@ class FilingPeriod(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     registration_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("gst_registrations.id"), nullable=False)
     period_code: Mapped[str] = mapped_column(String, nullable=False) # e.g. "2026-08"
+    assignee_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     @property
@@ -349,3 +356,29 @@ class UserSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),nullable=False)
     revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class ImsAction(Base):
+    """IMS decision on one supplier invoice (a valid record of a committed statement import). Append-only; latest applies."""
+    __tablename__ = 'ims_actions'
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    record_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('import_records.id'), nullable=False, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('users.id'), nullable=False)
+    action: Mapped[str] = mapped_column(String, nullable=False)  # accept, reject, pending
+    note: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class UploadLink(Base):
+    """A client-facing upload link for one period and file kind. Only the token's SHA-256 is stored."""
+    __tablename__ = 'upload_links'
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    period_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('filing_periods.id'), nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(String, nullable=False)  # sales, purchase
+    token_hash: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey('users.id'), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    max_uses: Mapped[int] = mapped_column(Integer, nullable=False)
+    uses: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default='0')
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

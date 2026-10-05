@@ -84,3 +84,24 @@ test('Sales preparation preserves versions, reviews, source rows and export tota
   await expectNoPageOverflow(page);
   await page.screenshot({path:testInfo.outputPath('sales-mobile.png'),fullPage:true});
 });
+
+test('Sales v2: GSTR-1 draft export downloads JSON and lists what it does not cover', async ({ page, request }, testInfo) => {
+  await loginApi(request);
+  const client = await (await request.post(`${API_BASE}/clients`, { data: { name: `Synthetic GSTR-1 ${Date.now()}` } })).json();
+  const reg = await (await request.post(`${API_BASE}/clients/${client.id}/registrations`, { data: { gstin: '00AAAAA0000A1Z0' } })).json();
+  const period = await (await request.post(`${API_BASE}/registrations/${reg.id}/periods`, { data: { period_code: '2026-08' } })).json();
+  const batch = await (await request.post(`${API_BASE}/periods/${period.id}/sales-imports`, { multipart: { file: { name: 'v2.csv', mimeType: 'text/csv', buffer: fs.readFileSync(path.join(root, 'sample_data/sales_v2/sales_register.csv')) } } })).json();
+  await request.post(`${API_BASE}/sales-imports/${batch.id}/commit`, { data: { acknowledge_blocked: true, note: 'Synthetic' } });
+  for (const row of (await (await request.get(`${API_BASE}/sales-imports/${batch.id}?limit=100`)).json()).items)
+    await request.post(`${API_BASE}/sales-imports/${batch.id}/rows/${row.id}/review`, { data: { decision: row.validation_status === 'ready' ? 'reviewed' : 'excluded', note: 'Synthetic' } });
+  await loginPage(page);
+  await page.goto(`/periods/${period.id}/sales`);
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export GSTR-1 draft (JSON)' }).click()]);
+  const file = testInfo.outputPath('gstr1.json'); await download.saveAs(file);
+  const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const expected = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/sales_v2/expected_gstr1.json'), 'utf8'));
+  expect(doc.fp).toBe('082026');
+  expect(doc.b2b).toEqual(expected.b2b);
+  expect(doc.hsn).toEqual(expected.hsn);
+  await expect(page.getByTestId('gstr1-warnings')).toContainText('B2CL');
+});

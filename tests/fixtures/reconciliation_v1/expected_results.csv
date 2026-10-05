@@ -1,0 +1,31 @@
+result_id,case_id,purchase_record_ids,statement_record_ids,expected_status,expected_reason,difference_field,expected_difference
+RES-01,SCEN-01,PUR-001,STMT-001,matched,Exact match,,
+RES-02,SCEN-02,PUR-002,STMT-002,matched,Exact match,,
+RES-03,SCEN-03,PUR-003,STMT-003,matched,Exact match,,
+RES-04,SCEN-04,PUR-004,STMT-004,matched,Exact match,,
+RES-05,SCEN-05,PUR-005,STMT-005,matched,Exact match,,
+RES-06,SCEN-06,PUR-006,,books_only,Missing from statement,,
+RES-07,SCEN-07,PUR-007,,books_only,Missing from statement,,
+RES-08,SCEN-08,,STMT-008,statement_only,Missing from purchases,,
+RES-09,SCEN-09,,STMT-009,statement_only,Missing from purchases,,
+RES-10,SCEN-10,PUR-010,STMT-010,amount_mismatch,Taxable values differ,taxable_value,-200.00
+RES-10,SCEN-10,PUR-010,STMT-010,amount_mismatch,Taxable values differ,invoice_total,-200.00
+RES-11,SCEN-11,PUR-011,STMT-011,amount_mismatch,Tax amounts differ,cgst,-10.00
+RES-11,SCEN-11,PUR-011,STMT-011,amount_mismatch,Tax amounts differ,sgst,-10.00
+RES-11,SCEN-11,PUR-011,STMT-011,amount_mismatch,Tax amounts differ,invoice_total,-20.00
+RES-12,SCEN-12,PUR-012,STMT-012,amount_mismatch,Tax components differ,cgst,180.00
+RES-12,SCEN-12,PUR-012,STMT-012,amount_mismatch,Tax components differ,sgst,180.00
+RES-12,SCEN-12,PUR-012,STMT-012,amount_mismatch,Tax components differ,igst,-360.00
+RES-13,SCEN-13,PUR-013A|PUR-013B,STMT-013,duplicate_candidate,Duplicate in purchases,,
+RES-14,SCEN-14,PUR-014,STMT-014A|STMT-014B,duplicate_candidate,Duplicate in statement,,
+RES-15A,SCEN-15,PUR-015,,validation_error,Missing invoice number,,
+RES-15B,SCEN-15,,STMT-015,statement_only,Valid counterpart is unmatched,,
+RES-16A,SCEN-16,,STMT-016,validation_error,Invalid date,,
+RES-16B,SCEN-16,PUR-016,,books_only,Valid counterpart is unmatched,,
+RES-17A,SCEN-17,PUR-017,,validation_error,Nonnumeric amount,,
+RES-17B,SCEN-17,,STMT-017,statement_only,Valid counterpart is unmatched,,
+RES-18A,SCEN-18,PUR-018,,validation_error,Inconsistent total,,
+RES-18B,SCEN-18,,STMT-018,statement_only,Valid counterpart is unmatched,,
+RES-19A,SCEN-19,PUR-019A,STMT-019A,matched,Exact match,,
+RES-19B,SCEN-19,PUR-019B,STMT-019B,matched,Exact match,,
+RES-20,SCEN-20,PUR-020,STMT-020,date_conflict,Dates differ,,

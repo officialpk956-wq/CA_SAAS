@@ -12,6 +12,8 @@ ADJUSTMENT_TYPES = {
     'other_liability': 'liability_adjustments',
     'itc_reversal': 'itc_reversal',
     'other_credit': 'other_credit',
+    # User-reported balance brought forward from the credit ledger (Phase 5B); adds to credit like other_credit.
+    'opening_credit': 'opening_credit',
 }
 ZERO = Decimal('0.00')
 
@@ -24,7 +26,7 @@ def _amount(value) -> Decimal:
 def compute(output_rows, itc_rows, adjustments) -> dict:
     """output_rows/itc_rows: dicts with 'ref' and optional per-head amounts.
     adjustments: dicts with 'ref', 'type', 'head', 'amount' (active only; voids are filtered by the caller)."""
-    heads = {h: {k: ZERO for k in ('output_tax', 'liability_adjustments', 'itc_claimed', 'itc_reversal', 'other_credit')} for h in HEADS}
+    heads = {h: {k: ZERO for k in ('output_tax', 'liability_adjustments', 'itc_claimed', 'itc_reversal', 'other_credit', 'opening_credit')} for h in HEADS}
     for row in output_rows:
         for h in HEADS: heads[h]['output_tax'] += _amount(row.get(h))
     for row in itc_rows:
@@ -37,7 +39,7 @@ def compute(output_rows, itc_rows, adjustments) -> dict:
     lines = {}
     for h, v in heads.items():
         liability = v['output_tax'] + v['liability_adjustments']
-        credit = v['itc_claimed'] - v['itc_reversal'] + v['other_credit']
+        credit = v['itc_claimed'] - v['itc_reversal'] + v['other_credit'] + v['opening_credit']
         lines[h] = {k: format(x, '.2f') for k, x in {**v, 'liability': liability, 'credit': credit, 'net': liability - credit}.items()}
     return {
         'engine_version': ENGINE_VERSION,

@@ -1,0 +1,182 @@
+[
+  {
+    "case_id": "SCEN-01",
+    "purpose": "Exact match 1",
+    "purchase_record_ids": ["PUR-001"],
+    "statement_record_ids": ["STMT-001"],
+    "intended_defects": [],
+    "expected_outcomes": ["matched"],
+    "explanations": "Standard exact match."
+  },
+  {
+    "case_id": "SCEN-02",
+    "purpose": "Exact match 2",
+    "purchase_record_ids": ["PUR-002"],
+    "statement_record_ids": ["STMT-002"],
+    "intended_defects": [],
+    "expected_outcomes": ["matched"],
+    "explanations": "Standard exact match."
+  },
+  {
+    "case_id": "SCEN-03",
+    "purpose": "Exact match 3",
+    "purchase_record_ids": ["PUR-003"],
+    "statement_record_ids": ["STMT-003"],
+    "intended_defects": [],
+    "expected_outcomes": ["matched"],
+    "explanations": "Standard exact match with IGST."
+  },
+  {
+    "case_id": "SCEN-04",
+    "purpose": "Exact match 4",
+    "purchase_record_ids": ["PUR-004"],
+    "statement_record_ids": ["STMT-004"],
+    "intended_defects": [],
+    "expected_outcomes": ["matched"],
+    "explanations": "Standard exact match with Cess only."
+  },
+  {
+    "case_id": "SCEN-05",
+    "purpose": "Exact match 5",
+    "purchase_record_ids": ["PUR-005"],
+    "statement_record_ids": ["STMT-005"],
+    "intended_defects": [],
+    "expected_outcomes": ["matched"],
+    "explanations": "Standard exact match."
+  },
+  {
+    "case_id": "SCEN-06",
+    "purpose": "Invoice appearing only in purchases 1",
+    "purchase_record_ids": ["PUR-006"],
+    "statement_record_ids": [],
+    "intended_defects": [],
+    "expected_outcomes": ["books_only"],
+    "explanations": "Missing from statement."
+  },
+  {
+    "case_id": "SCEN-07",
+    "purpose": "Invoice appearing only in purchases 2",
+    "purchase_record_ids": ["PUR-007"],
+    "statement_record_ids": [],
+    "intended_defects": [],
+    "expected_outcomes": ["books_only"],
+    "explanations": "Missing from statement."
+  },
+  {
+    "case_id": "SCEN-08",
+    "purpose": "Invoice appearing only in statement 1",
+    "purchase_record_ids": [],
+    "statement_record_ids": ["STMT-008"],
+    "intended_defects": [],
+    "expected_outcomes": ["statement_only"],
+    "explanations": "Missing from purchases."
+  },
+  {
+    "case_id": "SCEN-09",
+    "purpose": "Invoice appearing only in statement 2",
+    "purchase_record_ids": [],
+    "statement_record_ids": ["STMT-009"],
+    "intended_defects": [],
+    "expected_outcomes": ["statement_only"],
+    "explanations": "Missing from purchases."
+  },
+  {
+    "case_id": "SCEN-10",
+    "purpose": "Same invoice identity, different taxable value",
+    "purchase_record_ids": ["PUR-010"],
+    "statement_record_ids": ["STMT-010"],
+    "intended_defects": [],
+    "expected_outcomes": ["amount_mismatch"],
+    "explanations": "Taxable values differ between books and statement."
+  },
+  {
+    "case_id": "SCEN-11",
+    "purpose": "Same invoice identity, different tax amounts",
+    "purchase_record_ids": ["PUR-011"],
+    "statement_record_ids": ["STMT-011"],
+    "intended_defects": [],
+    "expected_outcomes": ["amount_mismatch"],
+    "explanations": "CGST and SGST amounts differ."
+  },
+  {
+    "case_id": "SCEN-12",
+    "purpose": "Equal combined tax but different components",
+    "purchase_record_ids": ["PUR-012"],
+    "statement_record_ids": ["STMT-012"],
+    "intended_defects": [],
+    "expected_outcomes": ["amount_mismatch"],
+    "explanations": "Books has CGST/SGST, statement has IGST."
+  },
+  {
+    "case_id": "SCEN-13",
+    "purpose": "Duplicate invoice in purchases",
+    "purchase_record_ids": ["PUR-013A", "PUR-013B"],
+    "statement_record_ids": ["STMT-013"],
+    "intended_defects": [],
+    "expected_outcomes": ["duplicate_candidate"],
+    "explanations": "One statement row, two purchase rows with same identity."
+  },
+  {
+    "case_id": "SCEN-14",
+    "purpose": "Duplicate invoice in statement",
+    "purchase_record_ids": ["PUR-014"],
+    "statement_record_ids": ["STMT-014A", "STMT-014B"],
+    "intended_defects": [],
+    "expected_outcomes": ["duplicate_candidate"],
+    "explanations": "One purchase row, two statement rows with same identity."
+  },
+  {
+    "case_id": "SCEN-15",
+    "purpose": "Purchase row missing invoice number",
+    "purchase_record_ids": ["PUR-015"],
+    "statement_record_ids": ["STMT-015"],
+    "intended_defects": ["missing_invoice_number"],
+    "expected_outcomes": ["validation_error", "statement_only"],
+    "explanations": "Invalid purchase row is rejected. The statement counterpart is unmatched."
+  },
+  {
+    "case_id": "SCEN-16",
+    "purpose": "Statement row with invalid date",
+    "purchase_record_ids": ["PUR-016"],
+    "statement_record_ids": ["STMT-016"],
+    "intended_defects": ["invalid_date"],
+    "expected_outcomes": ["books_only", "validation_error"],
+    "explanations": "Invalid statement row is rejected. The purchase counterpart is unmatched."
+  },
+  {
+    "case_id": "SCEN-17",
+    "purpose": "Purchase row with nonnumeric amount",
+    "purchase_record_ids": ["PUR-017"],
+    "statement_record_ids": ["STMT-017"],
+    "intended_defects": ["nonnumeric_amount"],
+    "expected_outcomes": ["validation_error", "statement_only"],
+    "explanations": "Invalid purchase row is rejected. The statement counterpart is unmatched."
+  },
+  {
+    "case_id": "SCEN-18",
+    "purpose": "Purchase row with inconsistent invoice total",
+    "purchase_record_ids": ["PUR-018"],
+    "statement_record_ids": ["STMT-018"],
+    "intended_defects": ["inconsistent_total"],
+    "expected_outcomes": ["validation_error", "statement_only"],
+    "explanations": "Invalid purchase row is rejected. The statement counterpart is unmatched."
+  },
+  {
+    "case_id": "SCEN-19",
+    "purpose": "Two different suppliers use same invoice number",
+    "purchase_record_ids": ["PUR-019A", "PUR-019B"],
+    "statement_record_ids": ["STMT-019A", "STMT-019B"],
+    "intended_defects": [],
+    "expected_outcomes": ["matched", "matched"],
+    "explanations": "Both invoices are distinct (different suppliers) and match perfectly with their counterparts."
+  },
+  {
+    "case_id": "SCEN-20",
+    "purpose": "Same supplier and invoice number but different dates",
+    "purchase_record_ids": ["PUR-020"],
+    "statement_record_ids": ["STMT-020"],
+    "intended_defects": [],
+    "expected_outcomes": ["date_conflict"],
+    "explanations": "Dates differ, causing a conflict."
+  }
+]

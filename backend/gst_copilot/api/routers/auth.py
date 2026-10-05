@@ -21,7 +21,8 @@ class LoginInput(BaseModel):
 
 async def _me(db, user):
     org = await db.get(Organization, user.organization_id)
-    return {'email': user.email, 'firm': org.name if org else None}
+    return {'id': str(user.id), 'email': user.email, 'display_name': user.display_name or user.email.split('@')[0], 'role': user.role,
+            'firm': org.name if org else None, 'require_separate_approver': bool(org and org.require_separate_approver)}
 
 @router.post('/auth/login')
 async def login(data: LoginInput, response: Response, db: AsyncSession = Depends(get_db)):
