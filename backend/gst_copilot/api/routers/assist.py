@@ -38,7 +38,7 @@ def supplier_names():
         return {r['supplier_ref']: r['supplier_name'] for r in csv.DictReader(f)}
 
 def _record(r: ImportRecord, side):
-    base = {'record_id': r.record_id, 'side': side, 'row_number': r.row_number, 'supplier_ref': r.supplier_ref, 'invoice_number': r.invoice_number,
+    base = {'record_id': r.record_id, 'side': side, 'row_number': r.row_number, 'supplier_ref': r.supplier_ref, 'document_type': r.document_type, 'invoice_number': r.invoice_number,
             'invoice_date': r.invoice_date, 'description': (r.raw_data or {}).get('description', '')}
     return base | {f: format(getattr(r, f), '.2f') for f in assist.AMOUNTS}
 
@@ -57,6 +57,10 @@ async def _latest_run(db, period_id):
 
 # --- Savings finder ---------------------------------------------------------------------------
 
+def _reduces(p):
+    """A credit note lowers credit, so it is never credit waiting, held back or left unclaimed."""
+    return p.get('document_type') == 'credit_note'
+
 async def active_legal(db, org_id):
     """CA-confirmed legal parameters by key. Missing keys mean the related check does not run."""
     rows = (await db.execute(select(LegalRule).where(LegalRule.organization_id == org_id, LegalRule.status == 'active'))).scalars().all()
@@ -72,7 +76,7 @@ def _legal_items(period, purchases, results, decision, drafts, legal, as_of):
             if d != 'claim': continue
             p = purchases[_ids(by_id[rid].purchase_record_ids)[0]]
             word = rules.blocked_keyword(p['description'], words)
-            if word: hits.append((p, word))
+            if word and not _reduces(p): hits.append((p, word))
         if hits:
             items.append({'kind': 'possibly_blocked_credit', 'title': 'Claimed credit may be blocked', 'amount': format(sum((assist.tax_of(p) for p, _ in hits), Decimal('0.00')), '.2f'),
                           'detail': '; '.join(f"{p['record_id']} “{p['description']}” matches “{w}”" for p, w in hits), 'needs_ca': True,
@@ -84,6 +88,7 @@ def _legal_items(period, purchases, results, decision, drafts, legal, as_of):
             unclaimed = (r.status == 'books_only' and d != 'claim') or (r.status == 'matched' and d in ('not_claimed', 'deferred', 'undecided'))
             if not unclaimed: continue
             p = purchases[_ids(r.purchase_record_ids)[0]]
+            if _reduces(p): continue
             deadline = rules.claim_deadline(date.fromisoformat(p['invoice_date']), rule['day'], rule['month'])
             if (deadline - as_of).days <= rule['warn_days']: near.append((p, deadline))
         if near:
@@ -127,6 +132,7 @@ async def _period_savings(db, period, org_id, as_of: date, legal=None):
         for r in by_status['books_only']:
             if decision[r.result_id] == 'claim': continue
             p = purchases[_ids(r.purchase_record_ids)[0]]
+            if _reduces(p): continue
             waiting[p['supplier_ref']] += assist.tax_of(p); refs[p['supplier_ref']].append(p['record_id'])
         if waiting:
             items.append({'kind': 'waiting_on_supplier', 'title': 'Credit waiting on suppliers', 'amount': format(sum(waiting.values()), '.2f'),
@@ -137,11 +143,11 @@ async def _period_savings(db, period, org_id, as_of: date, legal=None):
         for r in by_status['amount_mismatch']:
             p = purchases[_ids(r.purchase_record_ids)[0]]; s = statements[_ids(r.statement_record_ids)[0]]
             gap = assist.tax_of(s) - assist.tax_of(p)
-            if gap > 0: more += gap; ev.append(p['record_id'])
+            if gap > 0 and not _reduces(p): more += gap; ev.append(p['record_id'])
         if more:
             items.append({'kind': 'statement_shows_more_tax', 'title': 'Statement shows more tax than your books', 'amount': format(more, '.2f'),
                           'detail': f'{len(ev)} mismatched invoice(s): {", ".join(ev)}', 'action': 'Check the invoice copies; if the statement is right, correct the books in a new import version.', 'needs_ca': False, 'evidence': ev})
-        held = [r for r in by_status['matched'] if decision[r.result_id] in ('not_claimed', 'deferred')]
+        held = [r for r in by_status['matched'] if decision[r.result_id] in ('not_claimed', 'deferred') and not _reduces(purchases[_ids(r.purchase_record_ids)[0]])]
         if held:
             total = sum((assist.tax_of(purchases[_ids(r.purchase_record_ids)[0]]) for r in held), Decimal('0.00'))
             items.append({'kind': 'matched_not_claimed', 'title': 'Exact matches not claimed', 'amount': format(total, '.2f'),
@@ -224,11 +230,13 @@ async def brief(org_id: UUID = Depends(get_active_organization), db: AsyncSessio
 async def itc_suggestions(run_id: UUID, org_id: UUID = Depends(get_active_organization), db: AsyncSession = Depends(get_db)):
     run = await _owned_run(db, run_id, org_id)
     results, history = await _itc_state(db, run)
-    rows = [{'result_id': r.result_id, 'status': r.status, 'decision': history[r.result_id][-1].decision if history[r.result_id] else 'undecided'} for r in results]
+    purchases = (await _run_context(db, run))[0] if run.status == 'succeeded' else {}
+    kind = lambda r: purchases.get(next(iter(_ids(r.purchase_record_ids)), None), {}).get('document_type', 'invoice')
+    rows = [{'result_id': r.result_id, 'status': r.status, 'document_type': kind(r), 'decision': history[r.result_id][-1].decision if history[r.result_id] else 'undecided'} for r in results]
     suggestions = assist.itc_suggestions(rows)
     legal = await active_legal(db, org_id)
     if 'blocked_credit_keywords' in legal and run.status == 'succeeded':
-        purchases, _, _, _ = await _run_context(db, run); by_id = {r.result_id: r for r in results}
+        by_id = {r.result_id: r for r in results}
         for s in suggestions:
             if s['decision'] != 'claim': continue
             word = rules.blocked_keyword(purchases[_ids(by_id[s['result_id']].purchase_record_ids)[0]]['description'], legal['blocked_credit_keywords']['keywords'])

@@ -103,3 +103,22 @@ async def assign(period_id: UUID, data: AssignInput, org_id: UUID = Depends(get_
     audit(db, org_id, user.id, 'period_assigned', 'filing_period', period.id, period.id, f'assigned to {target.email}' if target else 'unassigned')
     await db.commit()
     return {'period_id': str(period.id), 'assignee': user_view(target) if target else None}
+
+
+class PasswordReset(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    new_password: str = Field(min_length=10, max_length=200)
+
+@router.post('/firm/users/{user_id}/password')
+async def reset_password(user_id: UUID, data: PasswordReset, org_id: UUID = Depends(get_active_organization), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Owner sets a temporary password for another member and ends all their sessions. Use /auth/password for yourself."""
+    require_role(user, 'owner')
+    target = (await db.execute(select(User).where(User.id == user_id, User.organization_id == org_id))).scalars().first()
+    if not target: raise HTTPException(404, 'User not found')
+    if target.id == user.id: raise HTTPException(400, 'Change your own password from your account page.')
+    try: target.password_hash = hash_password(data.new_password)
+    except ValueError as exc: raise HTTPException(400, str(exc))
+    await db.execute(update(UserSession).where(UserSession.user_id == target.id, UserSession.revoked_at.is_(None)).values(revoked_at=datetime.now(timezone.utc)))
+    audit(db, org_id, user.id, 'password_reset_by_owner', 'user', target.id, None, target.email)  # never the password
+    await db.commit()
+    return {'status': 'reset', 'user': user_view(target)}

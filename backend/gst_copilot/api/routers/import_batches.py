@@ -114,7 +114,7 @@ async def import_rows(import_id: UUID, offset: int = Query(0, ge=0), limit: int 
 @router.post("/periods/{period_id}/imports/gstr2b")
 async def import_gstr2b(period_id: UUID, file: UploadFile = File(...), org_id: UUID = Depends(get_active_organization),
                         user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """Convert a GSTR-2B JSON download (B2B section) into a statement import. The converted rows then go through
+    """Convert a GSTR-2B JSON download (B2B and CDNR sections) into a statement import. The converted rows then go through
     the normal preview, validation and commit; the original JSON is kept in private storage with its hash."""
     import hashlib, uuid as _uuid
     from pathlib import Path
@@ -136,6 +136,6 @@ async def import_gstr2b(period_id: UUID, file: UploadFile = File(...), org_id: U
         original.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=str(e))
     audit(db, org_id, user.id, 'gstr2b_converted', 'import_batch', batch.id, period_id,
-          f"{summary['converted']} invoice(s) converted, {len(summary['skipped'])} skipped, {len(summary['itc_unavailable'])} with ITC not available; JSON sha256 {hashlib.sha256(content).hexdigest()[:16]}")
+          f"{summary['converted']} document(s) converted, {len(summary['skipped'])} skipped, {len(summary['itc_unavailable'])} with ITC not available; JSON sha256 {hashlib.sha256(content).hexdigest()[:16]}")
     await db.commit()
     return {"batch": ImportBatchResponse.model_validate(batch).model_dump(mode="json"), "conversion": summary}

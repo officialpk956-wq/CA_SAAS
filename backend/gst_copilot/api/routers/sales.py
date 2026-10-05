@@ -17,6 +17,8 @@ from ..dependencies import get_db, get_active_organization, get_current_user
 from ...db.models import Client, FilingPeriod, GSTRegistration, SalesBatch, SalesRecord, SalesReview, AuditEvent, User
 from ...sales import HEADERS, HEADERS_V2, AMOUNTS, MAX_BYTES, VERSION, contract_version, parse_sales, summarize
 from ...services.export_service import sanitize_value
+from ...config import settings
+from ...xlsx import convert_upload, keep_original
 
 router = APIRouter(tags=['sales'])
 
@@ -61,6 +63,8 @@ async def upload(period_id: UUID, file: UploadFile = File(...), org_id: UUID = D
 async def store_sales_upload(db, period, org_id, user_id, filename, content: bytes, via: str = ''):
     """Shared by staff uploads and client upload links. The caller holds the period lock."""
     if len(content) > MAX_BYTES: raise HTTPException(413,'Sales file exceeds 5 MiB')
+    try: filename, content, workbook = convert_upload(filename, content)
+    except ValueError as exc: raise HTTPException(400,str(exc)) from exc
     digest = hashlib.sha256(content).hexdigest()
     existing = (await db.execute(select(SalesBatch).where(SalesBatch.period_id == period.id,SalesBatch.file_hash == digest))).scalars().first()
     if existing: return batch_view(existing)
@@ -73,6 +77,7 @@ async def store_sales_upload(db, period, org_id, user_id, filename, content: byt
     db.add_all([SalesRecord(batch_id=batch.id,**record) for record in records])
     db.add(AuditEvent(organization_id=org_id,user_id=user_id,action='sales_uploaded',resource_type='sales_batch',resource_id=str(batch.id),period_id=period.id,summary=f'{len(records)} sales rows{via}'))
     await db.commit();await db.refresh(batch)
+    keep_original(workbook, settings.STORAGE_DIR, org_id.hex)
     return batch_view(batch)
 
 @router.get('/periods/{period_id}/sales-imports')
@@ -171,7 +176,7 @@ async def gstr1_draft(batch_id: UUID, org_id: UUID = Depends(get_active_organiza
     if pending: warnings.insert(0, f'{pending} row(s) still pending review are not included.')
     if not GSTIN_SHAPE.fullmatch(reg.gstin): warnings.insert(0, f'Registration reference {reg.gstin} is not a GSTIN; the portal will reject this file.')
     db.add(AuditEvent(organization_id=org_id, user_id=user.id, action='gstr1_draft_exported', resource_type='sales_batch', resource_id=str(batch.id), period_id=period.id,
-                      summary=f"{len(ready)} row(s): {len(doc['b2b'])} B2B customer(s), {len(doc['b2cs'])} B2CS group(s), {len(doc['hsn']['data'])} HSN line(s)"))
+                      summary=f"{len(ready)} row(s): {len(doc['b2b'])} B2B customer(s), {len(doc.get('cdnr', []))} CDNR customer(s), {len(doc['b2cs'])} B2CS group(s), {len(doc['hsn']['data'])} HSN line(s)"))
     await db.commit()
     return {'document': doc, 'warnings': warnings, 'included_rows': len(ready),
             'notice': 'Draft built from GSTN\'s published GSTR-1 field names; not validated against the offline tool or portal. Open it in the GSTN offline tool and have a CA review it. Not a filed return.'}

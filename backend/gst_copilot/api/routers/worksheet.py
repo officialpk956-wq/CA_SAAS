@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...rules import rule_applies
 from ..dependencies import APPROVERS, get_db, get_active_organization, get_current_user, require_role
 from .sales import owned_period, record_views as sales_record_views
-from ...calculation import ADJUSTMENT_TYPES, ENGINE_VERSION, HEADS, compute
+from ...calculation import ADJUSTMENT_TYPES, ENGINE_VERSION, HEADS, compute, sign
 from ...setoff import VERSION as SETOFF_VERSION, parse_steps, setoff
 from ...gstr3b import summary as gstr3b_summary
 from ...db.models import (AuditEvent, Adjustment, AdjustmentVoid, Client, FilingEvidence, FilingPeriod, GSTRegistration, ImportRecord,
@@ -101,7 +101,9 @@ async def _gather(db, period, sales_batch_id, run_id, org_id):
     included_ids = {r['id'] for r in included}
     pending = [r for r in sales if r['decision'] != 'excluded' and r['id'] not in included_ids]
     if pending: blockers.append(f'{len(pending)} sales row(s) are pending review.')
-    output = [{'ref': r['raw_data']['record_id'], 'row_number': r['row_number'], 'taxable_value': r['raw_data']['taxable_value'], **{h: r['raw_data'][h] for h in HEADS}} for r in included]
+    # document_type is added only for notes, so invoice-only payloads stay exactly as before.
+    note = lambda kind: {'document_type': kind} if kind != 'invoice' else {}
+    output = [{'ref': r['raw_data']['record_id'], 'row_number': r['row_number'], 'taxable_value': r['raw_data']['taxable_value'], **note(r['raw_data']['document_type']), **{h: r['raw_data'][h] for h in HEADS}} for r in included]
 
     results, history = await _itc_state(db, run)
     purchases = {p.record_id: p for p in (await db.execute(select(ImportRecord).where(ImportRecord.batch_id == run.purchase_batch_id, ImportRecord.is_valid.is_(True)))).scalars().all()}
@@ -112,7 +114,7 @@ async def _gather(db, period, sales_batch_id, run_id, org_id):
         counts[latest] += 1
         if latest == 'claim':
             p = purchases[_ids(r.purchase_record_ids)[0]]
-            itc.append({'ref': r.result_id, 'purchase_record_id': p.record_id, **{h: format(getattr(p, h), '.2f') for h in HEADS}})
+            itc.append({'ref': r.result_id, 'purchase_record_id': p.record_id, **note(p.document_type), **{h: format(getattr(p, h), '.2f') for h in HEADS}})
     if counts['undecided']: blockers.append(f"{counts['undecided']} reconciliation result(s) have no ITC decision.")
     ims = await ims_state(db, run.statement_batch_id)
     ims_conflicts = [why for r in results if history[r.result_id] and history[r.result_id][-1].decision == 'claim' and (why := ims_blocking(ims, _ids(r.statement_record_ids)))]
@@ -149,7 +151,7 @@ async def _gather(db, period, sales_batch_id, run_id, org_id):
     rcm = {}
     for a in active:
         if a['type'] == 'rcm_liability': rcm[a['head']] = format(Decimal(rcm.get(a['head'], '0.00')) + Decimal(a['amount']), '.2f')
-    outward_taxable = format(sum((Decimal(o['taxable_value']) for o in output), Decimal('0.00')), '.2f')
+    outward_taxable = format(sum((sign(o) * Decimal(o['taxable_value']) for o in output), Decimal('0.00')), '.2f')
     payload = {'worksheet': result, 'setoff': setoff_out, 'gstr3b': gstr3b_summary(result, setoff_out, outward_taxable, rcm), 'inputs': {'output': output, 'itc': itc, 'adjustments': active},
                'counts': {'sales_rows': len(sales), 'sales_included': len(included), 'sales_pending': len(pending),
                           'sales_excluded': len(sales) - len(included) - len(pending), 'itc': counts},
@@ -191,8 +193,8 @@ async def _draft_views(db, period, org_id):
 async def itc_decisions(run_id: UUID, org_id: UUID = Depends(get_active_organization), db: AsyncSession = Depends(get_db)):
     run = await _owned_run(db, run_id, org_id)
     results, history = await _itc_state(db, run)
-    # Tax on the purchase record: the credit at stake if the result were claimed (display only).
-    tax = {p.record_id: p.cgst + p.sgst + p.igst + p.cess for p in (await db.execute(select(ImportRecord).where(ImportRecord.batch_id == run.purchase_batch_id, ImportRecord.is_valid.is_(True)))).scalars().all()}
+    # Tax on the purchase record: the credit at stake if the result were claimed (display only; negative for a credit note).
+    tax = {p.record_id: sign({'document_type': p.document_type}) * (p.cgst + p.sgst + p.igst + p.cess) for p in (await db.execute(select(ImportRecord).where(ImportRecord.batch_id == run.purchase_batch_id, ImportRecord.is_valid.is_(True)))).scalars().all()}
     return [{'result_id': r.result_id, 'status': r.status, 'reason': r.reason, 'purchase_record_ids': _ids(r.purchase_record_ids),
              'itc_at_stake': format(tax[_ids(r.purchase_record_ids)[0]], '.2f') if _ids(r.purchase_record_ids) and _ids(r.purchase_record_ids)[0] in tax else None,
              'statement_record_ids': _ids(r.statement_record_ids), 'decision': history[r.result_id][-1].decision if history[r.result_id] else 'undecided',

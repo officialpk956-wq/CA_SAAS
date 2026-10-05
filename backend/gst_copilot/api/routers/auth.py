@@ -56,3 +56,31 @@ async def logout(request: Request, response: Response, user: User = Depends(get_
 @router.get('/auth/me')
 async def me(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     return await _me(db, user)
+
+
+class PasswordChange(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=1, max_length=200)
+
+@router.post('/auth/password')
+async def change_password(data: PasswordChange, request: Request, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Change your own password. Ends every other session; this browser stays signed in."""
+    from ...auth import hash_password
+    key = user.email.lower()
+    wait = throttle.locked_for(key)
+    if wait: raise HTTPException(429, f'Too many failed attempts. Try again in {wait // 60 + 1} minute(s).')
+    if not verify_password(data.current_password, user.password_hash):
+        throttle.fail(key)
+        raise HTTPException(400, 'Current password is incorrect.')
+    if data.new_password == data.current_password: raise HTTPException(400, 'Choose a password different from the current one.')
+    try: new_hash = hash_password(data.new_password)
+    except ValueError as exc: raise HTTPException(400, str(exc))
+    db_user = await db.get(User, user.id)
+    db_user.password_hash = new_hash
+    current = token_hash(request.cookies.get(settings.SESSION_COOKIE, ''))
+    others = (await db.execute(select(UserSession).where(UserSession.user_id == user.id, UserSession.revoked_at.is_(None), UserSession.token_hash != current))).scalars().all()
+    for s in others: s.revoked_at = datetime.now(timezone.utc)
+    audit(db, user.organization_id, user.id, 'password_changed', 'user', user.id, None, f'{len(others)} other session(s) ended')
+    await db.commit()
+    return {'status': 'changed', 'other_sessions_ended': len(others)}
