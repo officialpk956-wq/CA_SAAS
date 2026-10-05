@@ -1,4 +1,5 @@
 """calc-v1: per-head draft worksheet (Phase 5A). Pure Decimal arithmetic, no set-off, no rounding.
+Credit notes subtract (added 2026-10-05; no earlier input could contain one, so earlier results are unchanged).
 
 Consumes already-reviewed amounts; it does not decide tax treatment, rates, or ITC eligibility.
 """
@@ -23,14 +24,19 @@ def _amount(value) -> Decimal:
         raise ValueError(f'Unsupported amount {value!r}')
     return amount
 
+def sign(row) -> int:
+    """Source amounts are positive; a credit note reduces output tax or claimed credit. Rows without a
+    document_type are invoices, so worksheets saved before notes existed compute exactly as before."""
+    return -1 if row.get('document_type') == 'credit_note' else 1
+
 def compute(output_rows, itc_rows, adjustments) -> dict:
-    """output_rows/itc_rows: dicts with 'ref' and optional per-head amounts.
+    """output_rows/itc_rows: dicts with 'ref', optional 'document_type' and optional per-head amounts.
     adjustments: dicts with 'ref', 'type', 'head', 'amount' (active only; voids are filtered by the caller)."""
     heads = {h: {k: ZERO for k in ('output_tax', 'liability_adjustments', 'itc_claimed', 'itc_reversal', 'other_credit', 'opening_credit')} for h in HEADS}
     for row in output_rows:
-        for h in HEADS: heads[h]['output_tax'] += _amount(row.get(h))
+        for h in HEADS: heads[h]['output_tax'] += sign(row) * _amount(row.get(h))
     for row in itc_rows:
-        for h in HEADS: heads[h]['itc_claimed'] += _amount(row.get(h))
+        for h in HEADS: heads[h]['itc_claimed'] += sign(row) * _amount(row.get(h))
     for adj in adjustments:
         if adj['type'] not in ADJUSTMENT_TYPES: raise ValueError(f"Unsupported adjustment type {adj['type']!r}")
         if adj['head'] not in HEADS: raise ValueError(f"Unsupported tax head {adj['head']!r}")

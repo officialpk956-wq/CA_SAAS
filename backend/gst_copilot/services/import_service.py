@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from ..db.models import SourceFile, ImportBatch, ImportRecord, ValidationIssue
+from ..xlsx import convert_upload, keep_original
 from ..parser import parse_purchases, parse_statements, ParserError
 from ..validation import validate_row
 
@@ -19,6 +20,8 @@ async def process_upload(
     storage_dir: str,
     valid_suppliers: set
 ) -> ImportBatch:
+    # Excel uploads become the same CSV first; the workbook is kept in storage by hash once the file is accepted.
+    original_filename, file_content, workbook = convert_upload(original_filename, file_content)
     # 1. Store privately and hash
     content_hash = hashlib.sha256(file_content).hexdigest()
     
@@ -83,12 +86,14 @@ async def process_upload(
         raise ValueError(f"Parsing error: {detail}")
 
     try:
-        return await _store_records(db, batch, source_rows, valid_suppliers)
+        stored = await _store_records(db, batch, source_rows, valid_suppliers)
     except Exception:
         # A rejected file must not leave its stored copy behind.
         await db.rollback()
         storage_path.unlink(missing_ok=True)
         raise
+    keep_original(workbook, storage_dir, org_id.hex)
+    return stored
 
 
 async def _store_records(db: AsyncSession, batch: ImportBatch, source_rows, valid_suppliers: set) -> ImportBatch:
