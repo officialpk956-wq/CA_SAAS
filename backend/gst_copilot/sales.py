@@ -1,14 +1,16 @@
 """Synthetic sales contracts v1 and v2: source checks and Decimal totals, no tax inference.
 
 v2 adds the fields a GSTR-1 draft needs, all SUPPLIED by the user, never inferred: customer GSTIN (registered
-customers only, GSTIN-shaped), place-of-supply state code, rate, HSN code, unit (UQC) and quantity."""
+customers only, GSTIN-shaped), place-of-supply state code, rate, HSN code, unit (UQC) and quantity.
+v2 also accepts credit_note and debit_note rows: amounts stay positive and a credit note subtracts from totals."""
 import csv
 import io
 import re
 from collections import Counter
 from datetime import date
 from decimal import Decimal
-from .validation import parse_decimal
+from .calculation import sign
+from .validation import DOCUMENT_TYPES, parse_decimal
 
 VERSION = 'sales-v1'
 AMOUNTS = ('taxable_value','cgst','sgst','igst','cess','invoice_total')
@@ -53,7 +55,8 @@ def parse_sales(content: bytes, period: str) -> list[dict]:
         for key in ('record_id','invoice_number'):
             if not d[key].strip(): issues.append('missing_'+key)
             elif d[key] != d[key].strip(): issues.append('whitespace_'+key)
-        if d['document_type'] != 'invoice': issues.append('unsupported_document')
+        # Notes need v2: GSTR-1 reports them separately and v1 has no customer GSTIN to report them against.
+        if d['document_type'] not in (DOCUMENT_TYPES if v2 else ('invoice',)): issues.append('unsupported_document')
         if d['supply_scope'] != 'domestic': issues.append('unsupported_scope')
         if d['customer_type'] not in ('registered','unregistered'): issues.append('invalid_customer_type')
         if not re.fullmatch(r'DEMO-[A-Za-z0-9-]+',d['customer_ref']): issues.append('invalid_customer_ref')
@@ -94,6 +97,6 @@ def summarize(rows: list[dict]) -> dict:
         if decision == 'excluded': counts['excluded'] += 1
         elif decision == 'reviewed' and row['validation_status'] == 'ready':
             counts['included'] += 1
-            for key in AMOUNTS: totals[key] += parse_decimal(row['raw_data'][key])
+            for key in AMOUNTS: totals[key] += sign(row['raw_data']) * parse_decimal(row['raw_data'][key])
         else: counts['pending'] += 1
     return dict(counts, included_totals={k:format(v,'.2f') for k,v in totals.items()})

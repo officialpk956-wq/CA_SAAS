@@ -47,12 +47,23 @@ ITC_RULES = {
     'validation_error': ('not_claimed', 'Source row failed validation.'),
 }
 
+# A purchase credit note lowers credit. 'claim' on a note means "include it in the worksheet", which reduces credit;
+# leaving it out would overstate credit. CA to confirm.
+# Only exact matches can be included (calc-v1), so an unmatched note is pointed at a manual ITC reversal adjustment.
+CREDIT_NOTE_INCLUDE = {
+    'matched': ('claim', 'Credit note matches the statement: include it so claimed credit is reduced.'),
+    'books_only': ('not_claimed', 'Credit note not on the statement yet. If it is genuine, record the reduction as an ITC reversal adjustment; CA to confirm.'),
+    'amount_mismatch': ('not_claimed', 'Credit note amounts differ from the statement. Confirm with the supplier and record the reduction as an ITC reversal adjustment; CA to confirm.'),
+}
+
 def itc_suggestions(results):
-    """results: [{result_id, status, decision}] -> suggestion per undecided result."""
+    """results: [{result_id, status, decision, document_type?}] -> suggestion per undecided result."""
     out = []
     for r in results:
         if r['decision'] != 'undecided': continue
         decision, reason = ITC_RULES.get(r['status'], ('not_claimed', 'No rule for this finding; review manually.'))
+        if r.get('document_type') == 'credit_note' and r['status'] in CREDIT_NOTE_INCLUDE:
+            decision, reason = CREDIT_NOTE_INCLUDE[r['status']]
         out.append({'result_id': r['result_id'], 'status': r['status'], 'decision': decision, 'reason': reason})
     return out
 

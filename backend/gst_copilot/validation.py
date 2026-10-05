@@ -5,6 +5,7 @@ from typing import Set, Tuple, Union, List
 from .models import SourceRow, ValidatedInvoice, ValidationIssue
 
 GSTIN_SHAPE = re.compile(r'\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]')
+DOCUMENT_TYPES = ('invoice', 'credit_note', 'debit_note')
 
 def parse_decimal(value_str: str) -> Decimal:
     """Parse a strict decimal. No blanks, no currency symbols, no commas."""
@@ -46,8 +47,9 @@ def validate_row(row: SourceRow, valid_suppliers: Set[str]) -> Union[ValidatedIn
     if supplier_ref not in valid_suppliers and not GSTIN_SHAPE.fullmatch(supplier_ref):
         return ValidationIssue(row, f"Supplier reference '{supplier_ref}' not found in supplier list.")
         
-    if document_type != "invoice":
-        return ValidationIssue(row, "Document type must be 'invoice'.")
+    # Amounts stay positive; the document type carries the sign (a credit note reduces credit downstream).
+    if document_type not in DOCUMENT_TYPES:
+        return ValidationIssue(row, "Document type must be 'invoice', 'credit_note' or 'debit_note'.")
 
     try:
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", invoice_date_str):
