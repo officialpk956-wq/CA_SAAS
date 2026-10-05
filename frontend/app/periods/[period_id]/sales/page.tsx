@@ -74,7 +74,7 @@ export default function Sales() {
   function uploadFile(file: File) {
     return perform(async () => {
       try { const result = await api.uploadSales(periodId, file); setMapperFile(null); setBatches(await api.getSalesImports(periodId)); choose(result.id); }
-      catch (e) { if (/headers/i.test(errorMessage(e))) setMapperFile(file); throw e; }
+      catch (e) { if (/headers/i.test(errorMessage(e)) && !/\.xlsx$/i.test(file.name)) setMapperFile(file); throw e; }
     });
   }
   async function refresh() { if (selected) setData(await api.getSales(selected, offset, filter)); setBatches(await api.getSalesImports(periodId)); }
@@ -94,11 +94,11 @@ export default function Sales() {
         <Button variant="outline" disabled={busy} title="Adds customer GSTIN, state code, rate, HSN, unit and quantity — needed for a GSTR-1 draft" onClick={() => perform(async () => download(new Blob([await api.salesTemplate("2")], { type: "text/csv" }), "synthetic_sales_template_v2.csv"))}><FileDown className="mr-2 h-4 w-4" />Template v2 (for GSTR-1)</Button>
         <label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted ${busy ? "pointer-events-none opacity-50" : ""}`}>
           <Upload className="h-4 w-4" />{data ? "Replace file" : "Upload file"}
-          <input aria-label="Sales CSV" type="file" accept=".csv" disabled={busy} className="sr-only" onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void uploadFile(file); }} />
+          <input aria-label="Sales CSV" type="file" accept=".csv,.xlsx" disabled={busy} className="sr-only" onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void uploadFile(file); }} />
         </label>
       </div>
       {mapperFile && <div className="w-full"><ColumnMapper template="sales" file={mapperFile} onCancel={() => setMapperFile(null)} onReady={async f => { setMapperFile(null); await uploadFile(f); }} /></div>}
-      <p className="w-full text-xs text-muted-foreground">Synthetic draft — not for filing. UTF-8 CSV, up to 5 MiB and 10,000 rows. Corrections create a new version; identical uploads reopen the existing one. Customer registration, place of supply and GST treatment are not verified.</p>
+      <p className="w-full text-xs text-muted-foreground">Synthetic draft — not for filing. UTF-8 CSV or Excel .xlsx (first sheet), up to 5 MiB and 10,000 rows. Corrections create a new version; identical uploads reopen the existing one. Customer registration, place of supply and GST treatment are not verified.</p>
     </section>
 
     {batches.length > 0 && <label className="block max-w-xl space-y-1 text-sm"><Eyebrow>Sales version</Eyebrow><select aria-label="Sales version" className="native-field" disabled={busy} value={selected} onChange={e => choose(e.target.value)}><option value="">Select a sales import</option>{batches.map((b, i) => <option key={b.id} value={b.id}>V{batches.length - i} · {b.filename} · {b.status} · {new Date(b.created_at).toLocaleString("en-IN")}</option>)}</select></label>}
@@ -125,7 +125,7 @@ export default function Sales() {
           <div className="table-wrap"><table className="min-w-[760px]"><thead><tr><th>Record</th><th>Date</th><th>Customer</th><th>Type</th><th className="!text-right">Taxable</th><th className="!text-right">Tax</th><th>Status</th><th><span className="sr-only">Review</span></th></tr></thead>
             <tbody>{data.items.map(r => { const [label, tone] = statusOf(r); return <tr key={r.id} className="clickable-row" onClick={() => inspect(r)}>
               <td className="id-cell">{r.raw_data.record_id || `row ${r.row_number}`}</td><td className="id-cell">{r.raw_data.invoice_date || "—"}</td><td>{r.raw_data.customer_ref || "Missing"}</td>
-              <td>{r.raw_data.customer_type === "registered" ? "B2B" : r.raw_data.customer_type === "unregistered" ? "B2C" : "—"}</td>
+              <td>{r.raw_data.customer_type === "registered" ? "B2B" : r.raw_data.customer_type === "unregistered" ? "B2C" : "—"}{r.raw_data.document_type === "credit_note" ? " · credit note (−)" : r.raw_data.document_type === "debit_note" ? " · debit note" : ""}</td>
               <td className="font-figures text-right">{r.raw_data.taxable_value || "—"}</td><td className="font-figures text-right">{rowTax(r)}</td>
               <td><StatusChip tone={tone}>{label}</StatusChip></td>
               <td><Button size="sm" variant="outline" disabled={busy} onClick={e => { e.stopPropagation(); inspect(r); }}>Inspect sale</Button></td></tr>; })}</tbody></table></div>

@@ -154,7 +154,7 @@ function ImportCard({periodId, type, batches, reload}: {periodId:string;type:"pu
 
     try { const b=await api.uploadImport(periodId,type==="purchase"?"purchase_register":"statement_2b",file);setSelected(b.id);setOffset(0);setAck(false);setNote("");setMapperFile(null);await reload(); }
 
-    catch(e){const message=errorMessage(e);setError(message);if(/headers/i.test(message))setMapperFile(file);}finally{setBusy(false);}
+    catch(e){const message=errorMessage(e);setError(message);if(/headers/i.test(message)&&!/\.xlsx$/i.test(file.name))setMapperFile(file);}finally{setBusy(false);}
 
   }
 
@@ -174,11 +174,11 @@ function ImportCard({periodId, type, batches, reload}: {periodId:string;type:"pu
 
   return <Card data-testid={`batch-${type}`} className="min-w-0"><CardHeader><CardTitle>{type==="purchase"?"Purchase Register":"GSTR-2B demo statement"}</CardTitle></CardHeader><CardContent className="space-y-4">
 
-    <label className="block">Upload CSV (5 MiB maximum)<input aria-label={`${type} CSV`} className="block w-full border rounded p-2 mt-2" type="file" accept=".csv" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f);e.target.value="";}}/></label>
+    <label className="block">Upload CSV or Excel .xlsx (first sheet, 5 MiB maximum)<input aria-label={`${type} CSV`} className="block w-full border rounded p-2 mt-2" type="file" accept=".csv,.xlsx" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f);e.target.value="";}}/></label>
 
-    {type==="statement" && <label className="block text-sm">…or import a GSTR-2B JSON download (B2B invoices)<input aria-label="GSTR-2B JSON" className="block w-full border rounded p-2 mt-2" type="file" accept=".json,application/json" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void import2b(f);e.target.value="";}}/></label>}
+    {type==="statement" && <label className="block text-sm">…or import a GSTR-2B JSON download (B2B invoices, credit and debit notes)<input aria-label="GSTR-2B JSON" className="block w-full border rounded p-2 mt-2" type="file" accept=".json,application/json" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void import2b(f);e.target.value="";}}/></label>}
 
-    {conversion && <div data-testid="gstr2b-conversion" className="rounded-lg border border-dashed p-3 text-sm space-y-1"><p><b>{conversion.converted}</b> invoice(s) converted. {conversion.notice}</p>{conversion.skipped.length>0 && <ul className="list-disc pl-5">{conversion.skipped.map(s=><li key={s.invoice}>Not imported: {s.invoice} — {s.reason}</li>)}</ul>}{conversion.itc_unavailable.length>0 && <p>ITC not available per the statement: {conversion.itc_unavailable.map(i=>`${i.record_id} (${i.reason})`).join(", ")} — decide these in the worksheet.</p>}</div>}
+    {conversion && <div data-testid="gstr2b-conversion" className="rounded-lg border border-dashed p-3 text-sm space-y-1"><p><b>{conversion.converted}</b> document(s) converted. {conversion.notice}</p>{conversion.skipped.length>0 && <ul className="list-disc pl-5">{conversion.skipped.map(s=><li key={s.invoice}>Not imported: {s.invoice} — {s.reason}</li>)}</ul>}{conversion.itc_unavailable.length>0 && <p>ITC not available per the statement: {conversion.itc_unavailable.map(i=>`${i.record_id} (${i.reason})`).join(", ")} — decide these in the worksheet.</p>}</div>}
 
     {error && <p role="alert" className="red-ink">{error}</p>}
 

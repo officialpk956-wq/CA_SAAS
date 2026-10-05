@@ -26,7 +26,7 @@ export default function ClientUpload() {
     {link && !done && <section className="paper-card space-y-4">
       <p className="text-sm"><b>{link.firm}</b> asks <b>{link.client}</b> for the <b>{link.what}</b> for <span className="font-figures">{link.period_code}</span>.</p>
       <p className="text-xs text-muted-foreground">CSV file, up to 5 MiB. This link can be used {link.uses_left} more time(s) and expires {new Date(link.expires_at).toLocaleDateString("en-IN")}. Your accountant reviews every file before using it.</p>
-      <input aria-label="File to upload" type="file" accept=".csv,text/csv" className="block w-full rounded border p-2" onChange={e => setFile(e.target.files?.[0] ?? null)} />
+      <input aria-label="File to upload" type="file" accept=".csv,.xlsx" className="block w-full rounded border p-2" onChange={e => setFile(e.target.files?.[0] ?? null)} />
       <Button className="w-full" disabled={!file || busy} onClick={send}>{busy ? "Uploading…" : "Upload"}</Button>
     </section>}
     {done && <p data-testid="upload-done" className="paper-card">{done}</p>}

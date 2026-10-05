@@ -43,7 +43,12 @@ export default function FirmPage() {
           <td className="id-cell">{u.email}</td>
           <td><select aria-label={`Role for ${u.email}`} className="native-field py-1" disabled={!owner || busy} value={u.role} title={ROLE_HELP[u.role]} onChange={e => act(() => firmApi.changeUser(u.id, { role: e.target.value as Role }))}>{(["owner", "reviewer", "preparer"] as Role[]).map(r => <option key={r} value={r}>{r}</option>)}</select></td>
           <td className="flex items-center gap-2">{u.is_active ? <StatusChip tone="done">Active</StatusChip> : <StatusChip tone="waiting">Disabled</StatusChip>}
-            {owner && u.id !== me?.id && <Button size="sm" variant="outline" disabled={busy} onClick={() => act(() => firmApi.changeUser(u.id, { is_active: !u.is_active }))}>{u.is_active ? "Disable" : "Enable"}</Button>}</td>
+            {owner && u.id !== me?.id && <Button size="sm" variant="outline" disabled={busy} onClick={() => act(() => firmApi.changeUser(u.id, { is_active: !u.is_active }))}>{u.is_active ? "Disable" : "Enable"}</Button>}
+            {owner && u.id !== me?.id && <Button size="sm" variant="outline" disabled={busy} onClick={() => {
+              // ponytail: native prompt for a rare owner action; a modal can come later if it is used often
+              const pw = window.prompt(`Temporary password for ${u.email} (at least 10 characters). They will be signed out everywhere.`);
+              if (pw) act(() => firmApi.resetPassword(u.id, pw));
+            }}>Reset password</Button>}</td>
         </tr>)}</tbody></table></div>
       <ul className="text-xs text-muted-foreground">{(Object.keys(ROLE_HELP) as Role[]).map(r => <li key={r}><b>{r}</b> — {ROLE_HELP[r]}</li>)}</ul>
     </section>
