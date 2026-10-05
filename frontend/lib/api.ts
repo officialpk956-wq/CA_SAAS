@@ -304,6 +304,7 @@ export const authApi = {
   login: (email: string, password: string): Promise<Me> => fetchApi('/auth/login', json('POST', { email, password })),
   logout: () => fetchApi('/auth/logout', { method: 'POST' }),
   me: (): Promise<Me> => fetchApi('/auth/me'),
+  changePassword: (current_password: string, new_password: string): Promise<{ status: string; other_sessions_ended: number }> => fetchApi('/auth/password', json('POST', { current_password, new_password })),
 };
 export interface CarryForward { status: 'available' | 'already_entered' | 'nothing_to_carry' | 'not_available'; from_period: string; reason?: string; draft_id?: string; amounts?: Record<string, string>; existing: TaxAdjustment[] }
 export const carryApi = { get: (periodId: string): Promise<CarryForward> => fetchApi(`/periods/${periodId}/carry-forward`), apply: (periodId: string): Promise<CarryForward> => fetchApi(`/periods/${periodId}/carry-forward`, { method: 'POST' }) };
@@ -315,6 +316,7 @@ export const firmApi = {
   addUser: (data: { email: string; display_name: string; role: Role; initial_password: string }): Promise<FirmUser> => fetchApi('/firm/users', json('POST', data)),
   changeUser: (id: string, data: Partial<Pick<FirmUser, 'role' | 'is_active' | 'display_name'>>): Promise<FirmUser> => fetchApi(`/firm/users/${id}`, json('PATCH', data)),
   assign: (periodId: string, user_id: string | null) => fetchApi(`/periods/${periodId}/assign`, json('POST', { user_id })),
+  resetPassword: (id: string, new_password: string) => fetchApi(`/firm/users/${id}/password`, json('POST', { new_password })),
 };export interface ImsItem { id: string; record_id: string; supplier_ref: string; invoice_number: string; invoice_date: string; taxable_value: string; tax: string; finding: string | null; action: 'accept' | 'reject' | 'pending' | null; previous_action_id: string | null; history: { id: string; action: string; note: string; actor_id: string; created_at: string }[] }
 export interface ImsInbox { batch_id: string; run_id: string | null; items: ImsItem[]; counts: Record<'accept' | 'reject' | 'pending' | 'no_action', number>; notice: string }
 export const imsApi = {

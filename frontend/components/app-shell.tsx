@@ -22,6 +22,7 @@ const TITLES: [RegExp, string, string][] = [
   [/^\/history/, "History & Audit", "Every action, figure and approval"],
   [/^\/knowledge/, "Knowledge & rules", "Client quirks, captured once and applied with approval"],
   [/^\/firm/, "Firm & team", "People, roles and the approval policy"],
+  [/^\/account/, "Your account", "Password and sign-in"],
 ];
 const SECTIONS = ["worksheet", "review", "ims", "sales", "categories", "workspace"];
 const PERIOD_KEY = "gsth_period";
@@ -53,7 +54,7 @@ function Account() {
   async function signOut() { try { await authApi.logout(); } finally { window.location.assign("/login"); } }
   if (!me) return null;
   return <div className="flex items-center gap-2">
-    <span className="hidden text-right leading-tight xl:block"><span className="block text-xs font-semibold" data-testid="firm-name">{me.firm}</span><span className="block text-[11px] text-muted-foreground">{me.email} · <span data-testid="my-role">{me.role}</span></span></span>
+    <span className="hidden text-right leading-tight xl:block"><Link href="/account" className="block text-xs font-semibold hover:underline" data-testid="firm-name" title="Your account">{me.firm}</Link><span className="block text-[11px] text-muted-foreground">{me.email} · <span data-testid="my-role">{me.role}</span></span></span>
     <button type="button" onClick={signOut} aria-label="Sign out" title="Sign out" className="grid h-9 w-9 place-items-center rounded-md border bg-card hover:bg-muted"><LogOut className="h-4 w-4" /></button>
   </div>;
 }
