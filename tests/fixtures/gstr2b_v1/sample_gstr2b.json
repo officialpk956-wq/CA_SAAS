@@ -1,41 +1,185 @@
 {
-  "chksum": "SYNTHETIC",
-  "data": {
-    "gstin": "00AAAAA0000A1Z0",
-    "rtnprd": "082026",
-    "version": "SYNTHETIC-TEST-FILE",
-    "gendt": "14-09-2026",
-    "docdata": {
-      "b2b": [
+ "chksum": "SYNTHETIC",
+ "data": {
+  "gstin": "00AAAAA0000A1Z0",
+  "rtnprd": "082026",
+  "version": "SYNTHETIC-TEST-FILE",
+  "gendt": "14-09-2026",
+  "docdata": {
+   "b2b": [
+    {
+     "ctin": "00BBBBB1111B1Z1",
+     "trdnm": "SYNTHETIC SUPPLIER ONE",
+     "supfildt": "11-09-2026",
+     "supprd": "082026",
+     "inv": [
+      {
+       "inum": "SUP1/001",
+       "typ": "R",
+       "dt": "03-08-2026",
+       "val": 2360.0,
+       "pos": "00",
+       "rev": "N",
+       "itcavl": "Y",
+       "rsn": "",
+       "items": [
         {
-          "ctin": "00BBBBB1111B1Z1",
-          "trdnm": "SYNTHETIC SUPPLIER ONE",
-          "supfildt": "11-09-2026",
-          "supprd": "082026",
-          "inv": [
-            {"inum": "SUP1/001", "typ": "R", "dt": "03-08-2026", "val": 2360.00, "pos": "00", "rev": "N", "itcavl": "Y", "rsn": "",
-             "items": [{"num": 1, "rt": 18, "txval": 1000.00, "igst": 0, "cgst": 90.00, "sgst": 90.00, "cess": 0},
-                       {"num": 2, "rt": 18, "txval": 1000.00, "igst": 0, "cgst": 90.00, "sgst": 90.00, "cess": 0}]},
-            {"inum": "SUP1/002", "typ": "R", "dt": "7-8-2026", "val": 118.10, "pos": "00", "rev": "N", "itcavl": "N", "rsn": "P",
-             "items": [{"num": 1, "rt": 18, "txval": 100.10, "igst": 18.00, "cgst": 0, "sgst": 0, "cess": 0}]},
-            {"inum": "SUP1/003", "typ": "R", "dt": "09-08-2026", "val": 590.00, "pos": "00", "rev": "Y", "itcavl": "Y",
-             "items": [{"num": 1, "rt": 18, "txval": 500.00, "igst": 90.00, "cgst": 0, "sgst": 0, "cess": 0}]}
-          ]
+         "num": 1,
+         "rt": 18,
+         "txval": 1000.0,
+         "igst": 0,
+         "cgst": 90.0,
+         "sgst": 90.0,
+         "cess": 0
         },
         {
-          "ctin": "00CCCCC2222C1Z2",
-          "trdnm": "SYNTHETIC SUPPLIER TWO",
-          "inv": [
-            {"inum": "0042", "typ": "SEWP", "dt": "12-08-2026", "val": 1000.00, "rev": "N", "itcavl": "Y",
-             "items": [{"num": 1, "rt": 0, "txval": 1000.00, "igst": 0, "cgst": 0, "sgst": 0, "cess": 0}]},
-            {"inum": "0043", "typ": "R", "dt": "15-08-2026", "val": 1121.00, "rev": "N", "itcavl": "Y",
-             "items": [{"num": 1, "rt": 12, "txval": 1000.00, "igst": 120.00, "cgst": 0, "sgst": 0, "cess": 1.00}]}
-          ]
+         "num": 2,
+         "rt": 18,
+         "txval": 1000.0,
+         "igst": 0,
+         "cgst": 90.0,
+         "sgst": 90.0,
+         "cess": 0
         }
-      ],
-      "cdnr": [
-        {"ctin": "00BBBBB1111B1Z1", "nt": [{"ntnum": "CN-1", "typ": "C", "dt": "20-08-2026", "txval": 100.00, "igst": 18.00}]}
-      ]
+       ]
+      },
+      {
+       "inum": "SUP1/002",
+       "typ": "R",
+       "dt": "7-8-2026",
+       "val": 118.1,
+       "pos": "00",
+       "rev": "N",
+       "itcavl": "N",
+       "rsn": "P",
+       "items": [
+        {
+         "num": 1,
+         "rt": 18,
+         "txval": 100.1,
+         "igst": 18.0,
+         "cgst": 0,
+         "sgst": 0,
+         "cess": 0
+        }
+       ]
+      },
+      {
+       "inum": "SUP1/003",
+       "typ": "R",
+       "dt": "09-08-2026",
+       "val": 590.0,
+       "pos": "00",
+       "rev": "Y",
+       "itcavl": "Y",
+       "items": [
+        {
+         "num": 1,
+         "rt": 18,
+         "txval": 500.0,
+         "igst": 90.0,
+         "cgst": 0,
+         "sgst": 0,
+         "cess": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ctin": "00CCCCC2222C1Z2",
+     "trdnm": "SYNTHETIC SUPPLIER TWO",
+     "inv": [
+      {
+       "inum": "0042",
+       "typ": "SEWP",
+       "dt": "12-08-2026",
+       "val": 1000.0,
+       "rev": "N",
+       "itcavl": "Y",
+       "items": [
+        {
+         "num": 1,
+         "rt": 0,
+         "txval": 1000.0,
+         "igst": 0,
+         "cgst": 0,
+         "sgst": 0,
+         "cess": 0
+        }
+       ]
+      },
+      {
+       "inum": "0043",
+       "typ": "R",
+       "dt": "15-08-2026",
+       "val": 1121.0,
+       "rev": "N",
+       "itcavl": "Y",
+       "items": [
+        {
+         "num": 1,
+         "rt": 12,
+         "txval": 1000.0,
+         "igst": 120.0,
+         "cgst": 0,
+         "sgst": 0,
+         "cess": 1.0
+        }
+       ]
+      }
+     ]
     }
+   ],
+   "cdnr": [
+    {
+     "ctin": "00BBBBB1111B1Z1",
+     "nt": [
+      {
+       "ntnum": "CN-1",
+       "typ": "C",
+       "suptyp": "R",
+       "dt": "20-08-2026",
+       "val": 118.0,
+       "pos": "29",
+       "rev": "N",
+       "itcavl": "Y",
+       "items": [
+        {
+         "num": 1,
+         "rt": 18,
+         "txval": 100.0,
+         "igst": 18.0,
+         "cgst": 0,
+         "sgst": 0,
+         "cess": 0
+        }
+       ]
+      },
+      {
+       "ntnum": "DN-7",
+       "typ": "D",
+       "suptyp": "R",
+       "dt": "22-08-2026",
+       "val": 59.0,
+       "pos": "29",
+       "rev": "N",
+       "itcavl": "Y",
+       "items": [
+        {
+         "num": 1,
+         "rt": 18,
+         "txval": 50.0,
+         "igst": 0,
+         "cgst": 4.5,
+         "sgst": 4.5,
+         "cess": 0
+        }
+       ]
+      }
+     ]
+    }
+   ]
   }
+ }
 }
