@@ -204,7 +204,10 @@ export interface ReviewEvent { id: string; decision: string; note: string; actor
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     const data = error.data as { detail?: unknown };
-    return typeof data?.detail === 'string' ? data.detail : 'Please check the supplied fields and try again.';
+    if (typeof data?.detail === 'string') return data.detail;
+    // A hosted backend on a free plan sleeps when idle; the proxy then answers 502/503/504 without a JSON reason.
+    if (error.status >= 500) return 'The server is starting up or unavailable. Wait about a minute and try again.';
+    return 'Please check the supplied fields and try again.';
   }
   return 'Unable to reach the API. Check the local backend and retry.';
 }
